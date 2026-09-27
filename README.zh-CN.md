@@ -14,30 +14,11 @@
 [![Tests](https://img.shields.io/badge/tests-29_suites_%7E688_assertions-brightgreen)](#验收状态)
 [![Stars](https://img.shields.io/github/stars/master666-max/blender-ai-console?style=flat&logo=github)](https://github.com/master666-max/blender-ai-console/stargazers)
 
-[核心创新](#核心创新) · [架构](#架构) · [快速开始](#快速开始) · [仓库结构](#仓库结构) · [验收状态](#验收状态) · [路线图](#路线图)
-
-<img src="docs/img/frame_1_body.png" width="30%" alt="第 1 步：杯身"/> <img src="docs/img/frame_2_hollow.png" width="30%" alt="第 2 步：挖空"/> <img src="docs/img/frame_3_handle.png" width="30%" alt="第 3 步：把手"/>
-
-*同一只马克杯，三个连续的 plan 段落——杯身 → 挖空 → 把手——每段独立编译、独立验收。呈现帧（EEVEE、三点布光、procedural 木纹）：* <img src="docs/img/presentation_wood.png" width="60%" alt="呈现帧"/>
+[架构](#架构) · [快速开始](#快速开始) · [仓库结构](#仓库结构) · [验收状态](#验收状态) · [路线图](#路线图)
 
 </div>
 
 ---
-
-## 核心创新
-
-主流「AI + Blender」方案让 LLM 直接写并执行 bpy 脚本——能跑，但无法重放、无法审计、无法撤销。本项目换了一条路，且下面每一条主张都有库内实验或回归套件背书：
-
-| # | 创新点 | 含义 | 实证 |
-|---|---|---|---|
-| 1 | **Plan–compile–verify 闭环** | LLM 永不产出可执行代码，只声明 **plan-JSON**——schema + 白名单校验（schema 外直接拒绝），由确定性编译器落地。 | Schema 门禁；29 套真机验收 ≈688 断言 |
-| 2 | **零静默逃逸** | 编译失败是*响亮的*（adapter 校验抛错并回滚）；几何缺陷被机械 verifier 拦截（非流形 / 零面积 / 面预算 / 尺度）。EXP-1 的 11 个盲写样本中，**通过 verifier 的产物语义全部正确——0 例静默逃逸**。 | EXP-1 报告；EXP-7 门禁实验 |
-| 3 | **契约质量是最高杠杆** | LLM 首版成功率的头号变量是 DSL 契约完整性：**补 4 行缺失文档，首版成功率 0% → 80%**。所以契约、错误码、schema 在本仓库是一等公民。 | EXP-1（n=11，同任务，盲写纪律） |
-| 4 | **段落 = 三重边界** | 每个对话段落同时是执行单元、上下文压缩单元、回退单元：WAL + 哈希链、Step 可重放、revision + backdating、意图级 cascading 选择性撤销。 | Berlage '94 / Cass '06 谱系；M1 套件 |
-| 5 | **同机位渲染 diff 作为地面真值** | 验证用固定机位 Workbench 渲染 + 感知哈希；呈现档（三点布光 + DOF）与 diff 管线两档并存——**每次渲染后恢复状态，互证 0 像素漂移**。 | M3 + M9-3 互证（dhash 一致） |
-| 6 | **负结果也是交付物** | 失败的实验被沉淀为防坑资产：顶点指纹研究（Gear/FastCDC vs 全量重算）结论"不接入"并发现 Morton 薄层散射；Blender 5.2 移除 Delta Mush 后裁决 Corrective Smooth 替代。 | EXP-5（6/6）、EXP-7（3/3）、裁决台账 |
-
-另有一条塑造全仓库的纪律：**上游隔离纪律**——第三方代码只吸收、不 import，来源全程可溯（见[致谢](#致谢)）。
 
 ## 架构
 
