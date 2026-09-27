@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blender AI 建模控制台 · 状态视图（mug-console-state/1.1）</title>
+<style>
+  /* M10-6 暗色模式：oklch 色板；暗色背景 #121212 禁纯黑（Material 暗色规范）。
+     主题三态：auto（跟随 prefers-color-scheme）/ light / dark，data-theme 属性驱动。 */
+  :root{
+    --bg:oklch(0.968 0.003 247); --card:oklch(1 0 0); --ink:oklch(0.24 0.01 260);
+    --mut:oklch(0.55 0.015 260); --line:oklch(0.90 0.008 255);
+    --teal:oklch(0.51 0.09 195); --tealbg:oklch(0.95 0.03 195);
+    --blue:oklch(0.45 0.19 262); --bluebg:oklch(0.95 0.025 262);
+    --amber:oklch(0.55 0.13 65); --amberbg:oklch(0.96 0.045 85);
+    --green:oklch(0.45 0.12 150); --greenbg:oklch(0.95 0.04 150);
+    --red:oklch(0.45 0.17 25); --redbg:oklch(0.95 0.03 25);
+    --seg-l:90%; --seg-s:55%; --seg-stroke-l:38%; --seg-stroke-s:45%;
+    --edge:oklch(0.68 0.012 260); --shadow:none;
+  }
+  [data-theme="dark"]{
+    --bg:#121212; --card:oklch(0.23 0.006 260); --ink:oklch(0.93 0.005 260);
+    --mut:oklch(0.68 0.01 260); --line:oklch(0.32 0.008 260);
+    --teal:oklch(0.75 0.10 195); --tealbg:oklch(0.30 0.04 195);
+    --blue:oklch(0.72 0.13 262); --bluebg:oklch(0.30 0.05 262);
+    --amber:oklch(0.80 0.12 80); --amberbg:oklch(0.30 0.05 80);
+    --green:oklch(0.76 0.13 150); --greenbg:oklch(0.28 0.05 150);
+    --red:oklch(0.70 0.15 25); --redbg:oklch(0.28 0.05 25);
+    --seg-l:32%; --seg-s:42%; --seg-stroke-l:72%; --seg-stroke-s:55%;
+    --edge:oklch(0.52 0.01 260); --shadow:0 1px 4px oklch(0 0 0 / 0.4);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.6 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);
+         display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  .badge{font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+  .badge.mode-inc{background:var(--greenbg);color:var(--green);border-color:transparent}
+  .badge.mode-full{background:var(--redbg);color:var(--red);border-color:transparent}
+  #themeBtn{min-width:74px}
+  /* M10-7 KPI 带：左上三大数字卡 */
+  #kpis{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;
+        padding:14px 20px 0}
+  @media(max-width:640px){#kpis{grid-template-columns:1fr}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;
+       padding:10px 16px;box-shadow:var(--shadow)}
+  .kpi .label{font-size:12px;color:var(--mut);letter-spacing:.02em}
+  .kpi .num{font-size:30px;font-weight:700;line-height:1.25;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11px;color:var(--mut)}
+  .kpi .num.ok{color:var(--green)} .kpi .num.warn{color:var(--amber)}
+  .kpi .num.bad{color:var(--red)}  .kpi .num.idle{color:var(--mut)}
+  main{padding:16px 20px;display:grid;gap:14px;
+       grid-template-columns:minmax(380px,7fr) minmax(300px,5fr)}
+  @media(max-width:960px){main{grid-template-columns:1fr}}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+          padding:14px 16px;box-shadow:var(--shadow)}
+  section h2{font-size:13px;margin:0 0 10px;color:var(--mut);font-weight:600;letter-spacing:.02em}
+  .seg-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);
+           border-radius:8px;margin-bottom:6px;background:var(--card)}
+  .dot{width:10px;height:10px;border-radius:3px;flex:none}
+  .seg-name{font-weight:600}
+  .kv{margin-left:auto;font-size:12px;color:var(--mut);display:flex;gap:10px}
+  .dirty{background:var(--amberbg);color:var(--amber);border-color:oklch(0.75 0.09 85)}
+  .clean{background:var(--card)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600}
+  code{font-family:Consolas,Menlo,monospace;font-size:12px;background:var(--bg);
+       padding:1px 5px;border-radius:4px}
+  .muted{color:var(--mut);font-size:12px}
+  .pill{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px}
+  .pill.ok{background:var(--greenbg);color:var(--green)}
+  .pill.dirty{background:var(--amberbg);color:var(--amber)}
+  #dag{width:100%;height:auto;display:block}
+  .srcbar{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut);flex-wrap:wrap}
+  button{font:inherit;font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);
+         background:var(--card);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--teal);color:var(--teal)}
+  footer{padding:10px 20px;color:var(--mut);font-size:12px}
+  .thought{border-left:3px solid var(--teal);padding:4px 10px;margin-bottom:6px;background:var(--tealbg);
+           border-radius:0 8px 8px 0}
+  .thought .claim{font-weight:600}
+  /* M10-5 渐进披露三级：L1 段落卡（默认折叠）→ L2 阶段条 → L3 单步详情 */
+  details.seg-card{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;
+                   background:var(--card);box-shadow:var(--shadow)}
+  details.seg-card>summary{display:flex;align-items:center;gap:8px;padding:8px 12px;
+                           cursor:pointer;list-style:none;user-select:none;border-radius:10px}
+  details.seg-card>summary::-webkit-details-marker{display:none}
+  details.seg-card>summary:hover{background:var(--bg)}
+  details.seg-card.dirty{border-color:oklch(0.75 0.09 85);
+                         background:var(--amberbg)}
+  details.seg-card.dirty>summary:hover{background:var(--card)}
+  .stagebar{display:flex;gap:6px;flex-wrap:wrap;padding:2px 12px 8px 32px}
+  .stage-chip{font-size:11px;padding:1px 10px;border-radius:999px;
+              background:var(--bluebg);color:var(--blue)}
+  .stage-chip b{margin-left:2px;font-variant-numeric:tabular-nums}
+  details.step-detail{margin:0 12px 8px 32px;border:1px solid var(--line);
+                      border-radius:8px;background:var(--bg)}
+  details.step-detail>summary{cursor:pointer;padding:4px 10px;font-size:12px;
+                              color:var(--mut);list-style:none;user-select:none}
+  details.step-detail>summary::-webkit-details-marker{display:none}
+  details.step-detail>summary:hover{color:var(--teal)}
+  details.step-detail table{margin:0 2px 6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Blender AI 建模控制台 · 状态视图</h1>
+  <span class="badge" id="schema">schema —</span>
+  <span class="badge" id="mode">mode —</span>
+  <span class="badge" id="dirty">dirty —</span>
+  <span class="badge" id="rev">revision —</span>
+  <button id="themeBtn" title="主题：auto（跟随系统）→ light → dark 循环">主题:auto</button>
+</header>
+<div id="kpis"></div>
+<main>
+  <section>
+    <h2>流程轴 · FlowAxis（DAG，按依赖布局）</h2>
+    <div id="dag"></div>
+    <p class="muted">节点 = Step（按语义段落着色）；箭头 = 依赖边。虚线描边 = 所属段落处于 dirty 状态。
+       点击节点看详情。布局：最长路径分层 + 重心法交叉最小化（dagre 式，自实现零依赖）。</p>
+  </section>
+  <div style="display:grid;gap:14px;align-content:start">
+    <section>
+      <h2>段落 · opinion 层</h2>
+      <div id="segments"></div>
+    </section>
+    <section>
+      <h2>假设面板 · ThoughtGraph（Why 层）</h2>
+      <div id="thoughts"></div>
+      <p class="muted">点击假设 = 反驳（重做该 Thought 及其下游）——M8-2 工具化后接入，
+         当前为只读视图。claim 文本需 schema ≥1 的可选扩展字段 <code>thoughts</code>。</p>
+    </section>
+    <section>
+      <h2>GoodPoint · 质量锚点</h2>
+      <div id="goodpoints"></div>
+    </section>
+    <section>
+      <h2>override 率 · 唯一健康指标（B3）</h2>
+      <div id="override"></div>
+      <p class="muted">判据：<b>长期为 0 = 人已经不看了 = 系统失效</b>。
+         曲线 = 每次 A/B 决策后的累计率（数据源 <code>kpis.override_curve</code>，schema/1.1）。</p>
+    </section>
+  </div>
+</main>
+<footer>
+  <div class="srcbar">
+    数据源：
+    <button id="btnDemo">加载内置示例（马克杯）</button>
+    <button id="btnFile">从文件加载 state.json</button>
+    <input type="file" id="filePick" accept=".json" style="display:none">
+    或把 state.json 拖进本页。只读视图——写操作走对话 / MCP 工具。
+    <span id="srcNote"></span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ── 数据 ───────────────────────────────────────────────── */
+const DEMO = {
+  schema: "mug-console-state/1.1",
+  mode: "INCREMENTAL",
+  steps: [
+    {id:"s1", seg:"S1_杯体", obj:"Mug", deps:[], thought_refs:[],
+     params:{"Body_Radius":0.04,"Body_Depth":0.095}},
+    {id:"s2", seg:"S2_把手", obj:"Handle", deps:["s1"], thought_refs:["T1"],
+     params:{"Handle_Ring_Radius":0.032,"Handle_Thickness":0.007}},
+    {id:"s3", seg:"S3_收尾", obj:"Mug", deps:["s2"], thought_refs:["T2"],
+     params:{"Subdiv_Level":2}}
+  ],
+  segments: {
+    "S1_杯体": {steps:["s1"], revision:3, dirty:false, output_hash:"3f9c…a1"},
+    "S2_把手": {steps:["s2"], revision:5, dirty:false, output_hash:"8d11…7e"},
+    "S3_收尾": {steps:["s3"], revision:6, dirty:true,  output_hash:""}
+  },
+  revisions: {
+    "S1_杯体": {param_fp:"b21c", output_hash:"3f9c…a1", revision:3, dirty:false},
+    "S2_把手": {param_fp:"77aa", output_hash:"8d11…7e", revision:5, dirty:false},
+    "S3_收尾": {param_fp:"c0de", output_hash:"",          revision:6, dirty:true}
+  },
+  mode: "INCREMENTAL",
+  params: {"Body_Radius":0.04,"Body_Depth":0.095,
+           "Handle_Ring_Radius":0.032,"Handle_Thickness":0.007,"Subdiv_Level":2},
+  commits: {"S1_杯体":"c0a1f3","S2_把手":"cf229b","S3_收尾":"c9d3e0"},
+  goodpoints: [{name:"GP1", step_id:"s3", thought_refs:["T1","T2"],
+                note:"初始版通过（把手 7mm）"}],
+  thoughts: [
+    {id:"T1", claim:"把手粗 7mm 握感舒适", kind:"assumption", status:"ACTIVE"},
+    {id:"T2", claim:"细分 2 级足够圆滑",    kind:"decision",  status:"ACTIVE"}
+  ],
+  kpis: {  // M10-4 schema/1.1（console._compute_kpis 产出）
+    override_rate: 0.3333, overrides: 1, ab_decisions: 3,
+    dirty_segments: 1, verify_fails: 1,
+    override_curve: [{n:1, rate:0}, {n:2, rate:0}, {n:3, rate:0.3333}]
+  }
+};
+
+/* ── 纯函数（可无头测试） ───────────────────────────────── */
+function segHue(name){
+  let h = 0;
+  for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) % 360;
+  return h;
+}
+function segFill(name){ return `hsl(${segHue(name)},var(--seg-s),var(--seg-l))`; }
+function segStroke(name){ return `hsl(${segHue(name)},var(--seg-stroke-s),var(--seg-stroke-l))`; }
+
+function layoutDag(state){
+  /* M10-5 dagre 式分层布局（自实现核心算法，零 CDN 依赖——headless 自检与离线场景可跑）：
+     ① 分层：最长路径（防环）
+     ② 层内排序：重心法（Barycenter）交叉最小化，下/上各 2 轮（dagre 默认 4-8 轮，
+        本规模 2 轮已收敛）；同 key 按 id 决胜，保证确定性
+     ③ 坐标：层内均匀分布（本规模等距足够；dagre 的 median 对齐在大图才有收益） */
+  const steps = state.steps || [];
+  const byId = new Map(steps.map(s => [s.id, s]));
+  const depth = {};
+  const depthOf = (id, seen) => {
+    if (depth[id] !== undefined) return depth[id];
+    if (seen.has(id)) return 0;                    // 防御：异常数据不成环
+    seen.add(id);
+    const s = byId.get(id) || {deps:[]};
+    let d = 0;
+    for (const dep of s.deps || []) d = Math.max(d, depthOf(dep, seen) + 1);
+    depth[id] = d;
+    return d;
+  };
+  for (const s of steps) depthOf(s.id, new Set());
+
+  const maxDepth = Math.max(0, ...steps.map(s => depth[s.id]));
+  const cols = Array.from({length: maxDepth + 1}, () => []);
+  for (const s of steps) cols[depth[s.id]].push(s);
+
+  const parentsOf = {}, childrenOf = {};           // 只记相邻层边（跨层边不参与重心）
+  for (const s of steps)
+    for (const dep of s.deps || [])
+      if (depth[dep] !== undefined && depth[s.id] - depth[dep] === 1){
+        (parentsOf[s.id] ||= []).push(dep);
+        (childrenOf[dep] ||= []).push(s.id);
+      }
+  const ord = new Map();                           // id → 层内序
+  cols.forEach(c => c.forEach((s, i) => ord.set(s.id, i)));
+
+  const sweep = dir => {                           // dir=+1 按上游重心（下扫）；-1 按下游（上扫）
+    const seq = Array.from({length: maxDepth + 1}, (_, i) => i);
+    if (dir < 0) seq.reverse();
+    const nb = dir > 0 ? parentsOf : childrenOf;
+    for (const d of seq){
+      const scored = cols[d].map((s, i) => {
+        const ns = (nb[s.id] || []).filter(x => ord.has(x));
+        return {s, key: ns.length
+          ? ns.reduce((a, x) => a + ord.get(x), 0) / ns.length
+          : i};
+      });
+      scored.sort((a, b) => a.key - b.key || a.s.id.localeCompare(b.s.id));
+      cols[d] = scored.map(x => x.s);
+      cols[d].forEach((s, i) => ord.set(s.id, i));
+    }
+  };
+  for (let r = 0; r < 2; r++){ sweep(+1); sweep(-1); }
+
+  const pos = {};
+  cols.forEach((c, d) => c.forEach((s, i) => {
+    pos[s.id] = {x: 30 + d * 172, y: 24 + i * 78, w: 148, h: 58, step: s};
+  }));
+  const width = 30 + (maxDepth + 1) * 172;
+  const maxCol = Math.max(1, ...cols.map(c => c.length));
+  const height = 24 + maxCol * 78;
+  return {pos, width, height, maxDepth, cols};
+}
+
+function countCrossings(state){
+  /* 相邻两层间的边交叉数（dagre 质量指标——自检断言用） */
+  const {cols, pos} = layoutDag(state);
+  let total = 0;
+  for (let d = 0; d + 1 < cols.length; d++){
+    const edges = [];
+    for (const s of cols[d + 1])
+      for (const dep of s.deps || [])
+        if (pos[dep] && pos[s.id])
+          edges.push([pos[dep].y, pos[s.id].y]);
+    for (let i = 0; i < edges.length; i++)
+      for (let j = i + 1; j < edges.length; j++){
+        const [a1, a2] = edges[i], [b1, b2] = edges[j];
+        if ((a1 - b1) * (a2 - b2) < 0) total++;
+      }
+  }
+  return total;
+}
+
+/* ── M10-5 渐进披露三级（纯函数，无头可测） ──────────────────
+   L1 段落卡（默认折叠 + 计数徽标）→ L2 展开段落卡 = 阶段条（段内 steps）
+   → L3 单步详情（参数/假设引用） */
+function buildSegmentTree(state){
+  const segs = state.segments || {};
+  const steps = state.steps || [];
+  const STAGE_ORDER = ["blockout", "structure", "detail", "cleanup", "deliver"];
+  const tree = Object.keys(segs).map(name => {
+    const segSteps = steps.filter(s => s.seg === name);
+    const stages = {};
+    for (const s of segSteps){
+      const st = s.stage || (STAGE_ORDER.includes(name.split("_").pop())
+        ? name.split("_").pop() : "blockout");
+      (stages[st] ||= []).push(s.id);
+    }
+    return {name, dirty: !!segs[name].dirty,
+            revision: segs[name].revision || 0,
+            output_hash: segs[name].output_hash || "",
+            nSteps: segSteps.length, steps: segSteps.map(s => s.id),
+            stages};
+  });
+  return tree;
+}
+
+function stepDetailHtml(sid, s){
+  /* L3 单步详情（纯函数，无头可测）。
+     ⚠ 回归注记：此前内联写法 `... + rows + (refs.length ? X : "") + ...`
+     因三元优先级低于 +，整串拼接被当成条件——参数表被静默吞掉。
+     抽成纯函数后由自检直接断言参数行/假设行/闭合标签。 */
+  s = s || {};
+  const rows = Object.entries(s.params || {}).map(([k, v]) =>
+    `<tr><td><code>${k}</code></td><td>${v}</td></tr>`);
+  if ((s.thought_refs || []).length)
+    rows.push(`<tr><td>假设</td><td>${s.thought_refs.join("、")}</td></tr>`);
+  return `<details class="step-detail"><summary>${sid}｜${s.obj || "—"}｜` +
+    `${Object.keys(s.params || {}).length} 参数</summary>` +
+    `<table>${rows.join("")}</table></details>`;
+}
+
+function dagSvg(state){
+  const {pos, width, height} = layoutDag(state);
+  const dirtySeg = new Set(Object.entries(state.segments || {})
+      .filter(([,v]) => v.dirty).map(([k]) => k));
+  const edges = (state.steps || []).flatMap(s =>
+    (s.deps || []).map(d => {
+      const a = pos[d], b = pos[s.id];
+      if (!a || !b) return "";
+      const x1 = a.x + a.w, y1 = a.y + a.h/2, x2 = b.x, y2 = b.y + b.h/2;
+      const mx = (x1 + x2) / 2;
+      return `<path d="M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}"
+        fill="none" stroke="var(--edge)" stroke-width="1.4" marker-end="url(#arw)"/>`;
+    }).join(""));
+  const nodes = Object.entries(pos).map(([id, p]) => {
+    const s = p.step;
+    const dashed = dirtySeg.has(s.seg) ? ";stroke-dasharray:5 3" : "";
+    return `<g class="node" data-id="${id}">
+      <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="9" style="
+        fill:${segFill(s.seg)};stroke:${segStroke(s.seg)};stroke-width:1${dashed}"/>
+      <text x="${p.x+10}" y="${p.y+20}" font-size="12" font-weight="600" fill="var(--ink)">${s.id} · ${s.seg}</text>
+      <text x="${p.x+10}" y="${p.y+38}" font-size="11" fill="var(--mut)">${s.obj}｜${Object.keys(s.params||{}).length} 参数</text>
+      <text x="${p.x+10}" y="${p.y+52}" font-size="11" fill="var(--mut)">${(s.thought_refs||[]).length ? "假设:" + s.thought_refs.join(",") : "无假设引用"}</text>
+    </g>`;
+  }).join("");
+  const defs = `<defs><marker id="arw" viewBox="0 0 10 10" refX="8" refY="5"
+    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--edge)" stroke-width="1.4"
+      stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`;
+  return `<svg id="dag" viewBox="0 0 ${Math.max(width,620)} ${height}" width="100%"
+    role="img" aria-label="FlowAxis DAG">${defs}${edges}${nodes}</svg>`;
+}
+
+function summarize(state){
+  const segs = Object.entries(state.segments || {});
+  const dirty = segs.filter(([,v]) => v.dirty).map(([k]) => k);
+  return {
+    nSteps: (state.steps || []).length,
+    nSegs: segs.length,
+    dirty,
+    mode: state.mode || "—",
+    schema: state.schema || "—",
+    revision: Math.max(0, ...segs.map(([,v]) => v.revision || 0))
+  };
+}
+
+/* ── M10-4 KPI 带 + override 曲线（纯函数，无头可测） ────── */
+function kpiCards(state){
+  const k = (state && state.kpis) || {};
+  const rate = typeof k.override_rate === "number" ? k.override_rate : null;
+  // override 率健康分色：>0 即健康（B3）；0 但已有决策 = idle 警示；
+  // 无数据（null）= —。>0.5 高摩擦（amber 提示 AI 侧需改进）。
+  const rateCls = rate === null ? "idle" : rate === 0 ? "idle"
+                : rate > 0.5 ? "warn" : "ok";
+  const rateText = rate === null ? "—"
+                 : rate === 0 ? "0"
+                 : (rate * 100).toFixed(1) + "%";
+  const dirtyN = typeof k.dirty_segments === "number" ? k.dirty_segments : null;
+  const vfails = typeof k.verify_fails === "number" ? k.verify_fails : null;
+  return [
+    {label:"override 率 · 唯一健康指标", num:rateText, cls:rateCls,
+     sub: (typeof k.overrides === "number" && typeof k.ab_decisions === "number")
+          ? `${k.overrides} 次 override / ${k.ab_decisions} 次 A/B 决策` : "schema/1 旧数据无 KPI"},
+    {label:"dirty 段 · 待收敛", num: dirtyN === null ? "—" : String(dirtyN),
+     cls: dirtyN === null ? "idle" : dirtyN > 0 ? "warn" : "ok",
+     sub: dirtyN > 0 ? "有段落改动未复验" : "全部段落已复验"},
+    {label:"verifier 失败 · 质量压力", num: vfails === null ? "—" : String(vfails),
+     cls: vfails === null ? "idle" : vfails > 0 ? "bad" : "ok",
+     sub: vfails > 0 ? "历史累计未过门禁次数" : "门禁全过"}
+  ];
+}
+
+function overrideCurveSvg(state){
+  const curve = (state && state.kpis && state.kpis.override_curve) || [];
+  if (!curve.length)
+    return `<div class="muted">暂无 A/B 决策数据（曲线在第一次 ab_commit 后出现）。</div>`;
+  const W = 420, H = 120, PAD = 26;
+  const xs = i => PAD + i * (W - PAD * 2) / Math.max(1, curve.length - 1);
+  const ys = r => H - PAD - r * (H - PAD * 2);
+  const pts = curve.map((d, i) => `${xs(i).toFixed(1)},${ys(d.rate).toFixed(1)}`).join(" ");
+  const dots = curve.map((d, i) =>
+    `<circle cx="${xs(i).toFixed(1)}" cy="${ys(d.rate).toFixed(1)}" r="3" fill="var(--teal)"/>`
+  ).join("");
+  const grid = [0, 0.5, 1].map(r =>
+    `<line x1="${PAD}" y1="${ys(r)}" x2="${W-PAD}" y2="${ys(r)}"
+       stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3"/>
+     <text x="${PAD-4}" y="${ys(r)+4}" font-size="10" fill="var(--mut)"
+       text-anchor="end">${Math.round(r*100)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="override 率曲线">
+    ${grid}
+    <polyline points="${pts}" fill="none" stroke="var(--teal)" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>${dots}
+    <text x="${W-PAD}" y="${H-6}" font-size="10" fill="var(--mut)" text-anchor="end">
+      A/B 决策序 →（最新 #${curve[curve.length-1].n}：${(curve[curve.length-1].rate*100).toFixed(1)}%）</text>
+  </svg>`;
+}
+
+/* ── M10-6 主题三态（纯函数部分，无头可测） ──────────────── */
+const THEME_CYCLE = ["auto", "light", "dark"];
+function nextThemePref(cur){
+  return THEME_CYCLE[(THEME_CYCLE.indexOf(cur) + 1) % THEME_CYCLE.length];
+}
+function resolveTheme(pref, prefersDark){
+  if (pref === "dark") return "dark";
+  if (pref === "light") return "light";
+  return prefersDark ? "dark" : "light";   // auto：跟随系统
+}
+
+/* ── DOM 渲染（浏览器侧） ───────────────────────────────── */
+if (typeof document !== "undefined"){
+  const $ = id => document.getElementById(id);
+  function renderAll(state){
+    const sum = summarize(state);
+    $("schema").textContent = "schema " + sum.schema;
+    const modeEl = $("mode");
+    modeEl.textContent = "mode " + sum.mode;
+    modeEl.className = "badge " + (sum.mode === "FULL" ? "mode-full" : "mode-inc");
+    $("dirty").textContent = "dirty " + sum.dirty.length + "/" + sum.nSegs +
+      (sum.dirty.length ? "（" + sum.dirty.join("、") + "）" : "");
+    $("rev").textContent = "revision " + sum.revision;
+    $("dag").innerHTML = dagSvg(state);
+
+    // M10-7 KPI 带
+    $("kpis").innerHTML = kpiCards(state).map(c => `
+      <div class="kpi">
+        <div class="label">${c.label}</div>
+        <div class="num ${c.cls}">${c.num}</div>
+        <div class="sub">${c.sub}</div>
+      </div>`).join("");
+
+    // M10-5 渐进披露三级：L1 段落卡（折叠+徽标）→ L2 阶段条 → L3 步详情
+    const segTree = buildSegmentTree(state);
+    const stepsById = new Map((state.steps || []).map(s => [s.id, s]));
+    $("segments").innerHTML = segTree.map(seg => `
+      <details class="seg-card ${seg.dirty ? "dirty" : "clean"}">
+        <summary>
+          <span class="dot" style="background:${segFill(seg.name)};border:1px solid ${segStroke(seg.name)}"></span>
+          <span class="seg-name">${seg.name}</span>
+          <span class="kv">
+            <span class="badge">${seg.nSteps} 步</span>
+            <span>rev ${seg.revision}</span>
+            <span>out <code>${seg.output_hash || "—"}</code></span>
+            <span class="pill ${seg.dirty ? "dirty" : "ok"}">${seg.dirty ? "dirty" : "green"}</span>
+          </span>
+        </summary>
+        ${Object.keys(seg.stages).length ? `
+        <div class="stagebar">` + Object.entries(seg.stages).map(([st, sids]) => `
+          <span class="stage-chip">${st} <b>${sids.length}</b></span>`).join("") + `</div>` : ""}
+        ${seg.steps.map(sid => stepDetailHtml(sid, stepsById.get(sid))).join("")}
+      </details>`).join("")
+      || `<p class="muted">暂无段落。</p>`;
+
+    const th = state.thoughts || [];
+    $("thoughts").innerHTML = th.length ? th.map(t => `
+      <div class="thought">
+        <span class="claim">${t.id}（${t.kind}）</span> — ${t.claim}
+        <span class="pill ${t.status === "ACTIVE" ? "ok" : "dirty"}" style="margin-left:6px">${t.status}</span>
+      </div>`).join("")
+      : `<p class="muted">state/1 未含 thoughts 字段——假设引用见各 Step 的 thought_refs。</p>`;
+
+    $("goodpoints").innerHTML = (state.goodpoints || []).map(g => `
+      <div class="seg-row clean">
+        <span class="seg-name">${g.name}</span>
+        <span class="kv"><span>step ${g.step_id || "—"}</span>
+        <span>${g.note || ""}</span></span>
+      </div>`).join("") || `<p class="muted">暂无 GoodPoint。</p>`;
+
+    // M10-4 override 面板：曲线 + 判读
+    const k = state.kpis || {};
+    $("override").innerHTML =
+      overrideCurveSvg(state) +
+      (typeof k.override_rate === "number"
+        ? `<p class="muted">当前累计 ${(k.override_rate*100).toFixed(1)}%`
+          + `（${k.overrides}/${k.ab_decisions}）——B3 摩擦对称：人选非 AI 偏好 = 健康摩擦。</p>`
+        : `<p class="muted">schema/1 旧数据未含 kpis——重新 export_state（/1.1）后出现。</p>`);
+  }
+
+  /* ── M10-6 主题三态切换（auto → light → dark 循环，localStorage 记忆） ── */
+  const THEME_KEY = "mug-console-theme";
+  let themePref = localStorage.getItem(THEME_KEY) || "auto";
+  function applyTheme(){
+    const prefersDark = window.matchMedia
+      && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const real = resolveTheme(themePref, !!prefersDark);
+    if (real === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    $("themeBtn").textContent = "主题:" + themePref;
+  }
+  $("themeBtn").onclick = () => {
+    themePref = nextThemePref(themePref);
+    localStorage.setItem(THEME_KEY, themePref);
+    applyTheme();
+  };
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", applyTheme);
+  applyTheme();
+
+  function isCompatibleSchema(s){
+    return typeof s === "string" && /^mug-console-state\/1(\.|$)/.test(s);
+  }
+  async function boot(){
+    renderAll(DEMO); $("srcNote").textContent = "（内置示例）";
+    try {
+      const r = await fetch("state.json", {cache: "no-store"});
+      if (r.ok){
+        const s = await r.json();
+        if (isCompatibleSchema(s.schema)){ renderAll(s);
+          $("srcNote").textContent = "（已加载同目录 state.json）"; }
+      }
+    } catch (e) { /* file:// 或未部署 state.json：保留示例 */ }
+  }
+  $("btnDemo").onclick = () => { renderAll(DEMO); $("srcNote").textContent = "（内置示例）"; };
+  $("btnFile").onclick = () => $("filePick").click();
+  $("filePick").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    f.text().then(t => { renderAll(JSON.parse(t));
+      $("srcNote").textContent = "（已加载：" + f.name + "）"; });
+  };
+  document.addEventListener("dragover", e => e.preventDefault());
+  document.addEventListener("drop", e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    f.text().then(t => { renderAll(JSON.parse(t));
+      $("srcNote").textContent = "（已拖入：" + f.name + "）"; });
+  });
+  boot();
+}
+</script>
+</body>
+</html>

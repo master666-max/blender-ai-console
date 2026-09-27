@@ -1,0 +1,150 @@
+{
+  "schema": "mug-console-state/1.1",
+  "mode": "INCREMENTAL",
+  "steps": [
+    {
+      "id": "s1",
+      "seg": "S1_杯体",
+      "obj": "Mug",
+      "deps": [],
+      "thought_refs": [],
+      "params": {
+        "Body_Radius": 0.04,
+        "Body_Depth": 0.095
+      }
+    },
+    {
+      "id": "s2",
+      "seg": "S2_把手",
+      "obj": "Handle",
+      "deps": [
+        "s1"
+      ],
+      "thought_refs": [
+        "T1"
+      ],
+      "params": {
+        "Handle_Ring_Radius": 0.032,
+        "Handle_Thickness": 0.007
+      }
+    },
+    {
+      "id": "s3",
+      "seg": "S3_收尾",
+      "obj": "Mug",
+      "deps": [
+        "s2"
+      ],
+      "thought_refs": [
+        "T2"
+      ],
+      "params": {
+        "Subdiv_Level": 2
+      }
+    }
+  ],
+  "segments": {
+    "S1_杯体": {
+      "steps": [
+        "s1"
+      ],
+      "revision": 3,
+      "dirty": false,
+      "output_hash": "3f9c…a1"
+    },
+    "S2_把手": {
+      "steps": [
+        "s2"
+      ],
+      "revision": 5,
+      "dirty": false,
+      "output_hash": "8d11…7e"
+    },
+    "S3_收尾": {
+      "steps": [
+        "s3"
+      ],
+      "revision": 6,
+      "dirty": true,
+      "output_hash": ""
+    }
+  },
+  "revisions": {
+    "S1_杯体": {
+      "param_fp": "b21c",
+      "output_hash": "3f9c…a1",
+      "revision": 3,
+      "dirty": false
+    },
+    "S2_把手": {
+      "param_fp": "77aa",
+      "output_hash": "8d11…7e",
+      "revision": 5,
+      "dirty": false
+    },
+    "S3_收尾": {
+      "param_fp": "c0de",
+      "output_hash": "",
+      "revision": 6,
+      "dirty": true
+    }
+  },
+  "params": {
+    "Body_Radius": 0.04,
+    "Body_Depth": 0.095,
+    "Handle_Ring_Radius": 0.032,
+    "Handle_Thickness": 0.007,
+    "Subdiv_Level": 2
+  },
+  "commits": {
+    "S1_杯体": "c0a1f3",
+    "S2_把手": "cf229b",
+    "S3_收尾": "c9d3e0"
+  },
+  "goodpoints": [
+    {
+      "name": "GP1",
+      "step_id": "s3",
+      "thought_refs": [
+        "T1",
+        "T2"
+      ],
+      "note": "初始版通过（把手 7mm）"
+    }
+  ],
+  "thoughts": [
+    {
+      "id": "T1",
+      "claim": "把手粗 7mm 握感舒适",
+      "kind": "assumption",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "T2",
+      "claim": "细分 2 级足够圆滑",
+      "kind": "decision",
+      "status": "ACTIVE"
+    }
+  ],
+  "kpis": {
+    "override_rate": 0.3333,
+    "overrides": 1,
+    "ab_decisions": 3,
+    "dirty_segments": 1,
+    "verify_fails": 1,
+    "override_curve": [
+      {
+        "n": 1,
+        "rate": 0.0
+      },
+      {
+        "n": 2,
+        "rate": 0.0
+      },
+      {
+        "n": 3,
+        "rate": 0.3333
+      }
+    ]
+  }
+}
