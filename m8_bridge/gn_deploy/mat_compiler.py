@@ -1,6 +1,16 @@
 """mat_compiler.py — M4-11 材质编译器（d3-material 路线）
 ====================================================================
 
+M8-R4 素材转正（2026-09-28 R7e）：隔离区 nodes/WD_wood.py → procedural
+木纹路径。plan 增加可选 "procedural" 字段（{"type": "wood", ...}），
+编译期把 WD 纹理链（Wave BANDS/X/SIN + Noise 扰动 + Mix RGBA + Bump）
+**内联进材质节点树**（不建 ShaderNodeGroup——省掉 4.0+ interface API
+漂移面；EXP-006 纪律不变：材质=编译器管理资产，禁材质槽）。
+吸收源码教训：Mix RGBA 端口索引 Factor=inputs[0]/A=[6]/B=[7]/Color=outputs[2]；
+V-04 幂等（本编译器"同名复用+参数重放"天然覆盖）；编译器命名节点
+（WD_Wave/WD_Noise/WD_Mix/WD_Bump）使重放可寻址不重建。
+
+
 为什么存在（EXP-006 设计约束）：**材质必须编译进节点树，禁走 bpy 材质槽**——
 材质作为受编译器管理的资产（plan-JSON → Principled BSDF 节点图），
 由 set_material op 挂进 GN 树末端。重编译删树重建时，材质引用随段落
@@ -25,6 +35,7 @@ plan 形态（AI 写语义 + 偏差，编译器填全参数）：
 from __future__ import annotations
 
 import hashlib
+import json as _json
 from typing import Any
 
 __all__ = ["MaterialConstraintError", "MAT_PRESETS", "MATERIAL_PRESET_KEYS",
@@ -67,6 +78,15 @@ MAT_PRESETS: dict[str, dict[str, Any]] = {
 
 MATERIAL_PRESET_KEYS = frozenset(MAT_PRESETS)
 
+# procedural 纹理类型（M8-R4：WD_wood 转正；后续可扩 marble 等）
+PROCEDURAL_TYPES = frozenset({"wood"})
+
+# WD 源配方默认（隔离区 WD_wood.py 实测值：Distortion=6.0"木纹的灵魂"）
+_WD_DEFAULTS = {"scale": 2.0, "distortion": 6.0, "detail": 3.0,
+                "color_light": [0.72, 0.55, 0.35],
+                "color_dark": [0.35, 0.18, 0.06],
+                "bump_strength": 0.15}
+
 
 # ─────────────────────────────────────────────────────────────
 # 物理约束校验（纯 Python，无 bpy——预校验可移植）
@@ -83,10 +103,12 @@ def normalize_material_plan(mat_plan: dict) -> tuple[dict, list[str]]:
             f"material_plan 必须是 dict，实得 {type(mat_plan).__name__}",
             code="MATERIAL_PLAN_TYPE")
     unknown = [k for k in mat_plan
-               if k not in {"preset", "surface", "layers", "assignment"}]
+               if k not in {"preset", "surface", "layers", "assignment",
+                            "procedural"}]
     if unknown:
         raise MaterialConstraintError(
-            f"material_plan 未知字段 {unknown}；允许 preset/surface/layers/assignment",
+            f"material_plan 未知字段 {unknown}；允许 preset/surface/layers/"
+            "assignment/procedural",
             code="MATERIAL_PLAN_FIELD",
             suggestions=[{"action": "remove_field", "target": str(unknown)}])
     preset = mat_plan.get("preset", "")
@@ -116,6 +138,50 @@ def normalize_material_plan(mat_plan: dict) -> tuple[dict, list[str]]:
         params["coat"] = max(float(params.get("coat", 0.0)), 0.5)
     elif isinstance(layers.get("coat"), (int, float)):
         params["coat"] = float(layers["coat"])
+
+    # procedural（M8-R4：WD_wood 转正——纯 Python 校验层，编译期在 bpy 侧内联）
+    proc = mat_plan.get("procedural")
+    if proc is not None:
+        if not isinstance(proc, dict):
+            raise MaterialConstraintError(
+                f"procedural 必须是 dict，实得 {type(proc).__name__}",
+                code="MATERIAL_PROCEDURAL_FIELD")
+        ptype = proc.get("type", "")
+        if ptype not in PROCEDURAL_TYPES:
+            raise MaterialConstraintError(
+                f"未知 procedural 类型 {ptype!r}；合法：{sorted(PROCEDURAL_TYPES)}",
+                code="MATERIAL_PROCEDURAL_TYPE",
+                suggestions=[{"action": "replace_value", "target":
+                              "procedural.type", "value": sorted(PROCEDURAL_TYPES)}])
+        pkeys = {"type", "scale", "distortion", "detail",
+                 "color_light", "color_dark", "bump_strength"}
+        pk_unknown = [k for k in proc if k not in pkeys]
+        if pk_unknown:
+            raise MaterialConstraintError(
+                f"procedural 未知字段 {pk_unknown}；允许 {sorted(pkeys)}",
+                code="MATERIAL_PROCEDURAL_FIELD",
+                suggestions=[{"action": "remove_field", "target": str(pk_unknown)}])
+        if "scale" in proc and not (0.0 <= float(proc["scale"]) <= 100.0):
+            raise MaterialConstraintError(
+                f"procedural.scale={proc['scale']} 超出 [0, 100]",
+                code="MATERIAL_PROCEDURAL_RANGE")
+        if "detail" in proc and not (0.0 <= float(proc["detail"]) <= 16.0):
+            raise MaterialConstraintError(
+                f"procedural.detail={proc['detail']} 超出 [0, 16]",
+                code="MATERIAL_PROCEDURAL_RANGE")
+        for ck in ("color_light", "color_dark"):
+            if ck in proc:
+                c = proc[ck]
+                if (not isinstance(c, (list, tuple)) or len(c) != 3
+                        or any(not (0.0 <= float(x) <= 1.0) for x in c)):
+                    raise MaterialConstraintError(
+                        f"procedural.{ck} 必须是 [r,g,b] 且各分量 ∈ [0,1]",
+                        code="MATERIAL_PROCEDURAL_RANGE")
+        if "bump_strength" in proc and not (0.0 <= float(proc["bump_strength"]) <= 1.0):
+            raise MaterialConstraintError(
+                f"procedural.bump_strength={proc['bump_strength']} 超出 [0, 1]",
+                code="MATERIAL_PROCEDURAL_RANGE")
+        params["procedural"] = dict(proc)   # 完整传给编译段（含默认值回填）
 
     # 物理约束（编译期响亮失败——工单 M4-11 verifier 口径）
     if not (0.0 <= float(params["metallic"]) <= 1.0):
@@ -178,8 +244,7 @@ def compile_material(bpy, mat_plan: dict, name: str | None = None) -> Any:
     params, warnings = normalize_material_plan(mat_plan)
     preset = mat_plan.get("preset", "custom")
     if name is None:
-        # plan 指纹派生稳定名（同 plan 复用同一材质；surface 覆盖参与指纹）
-        import json as _json
+        # plan 指纹派生稳定名（同 plan 复用同一材质；surface/procedural 覆盖参与指纹）
         fp = hashlib.sha256(_json.dumps(mat_plan, sort_keys=True,
                                         ensure_ascii=False).encode()).hexdigest()[:8]
         name = f"MAT_{preset}_{fp}"
@@ -201,6 +266,7 @@ def compile_material(bpy, mat_plan: dict, name: str | None = None) -> Any:
             raise MaterialConstraintError(
                 f"材质 {name!r} 已存在但无 Principled BSDF——非本编译器产物，拒绝重放",
                 code="MATERIAL_FOREIGN")
+    nt = mat.node_tree
     _set_principled(bsdf, "base_color", (*params["base_color"], 1.0))
     _set_principled(bsdf, "metallic", float(params["metallic"]))
     _set_principled(bsdf, "roughness", float(params["roughness"]))
@@ -209,10 +275,73 @@ def compile_material(bpy, mat_plan: dict, name: str | None = None) -> Any:
     _set_principled(bsdf, "coat", coat)
     if "coat_roughness" in params:
         _set_principled(bsdf, "coat_roughness", float(params["coat_roughness"]))
+    proc = params.get("procedural")
+    if proc is not None:
+        _build_wood_chain(mat, nt, bsdf, proc)
     mat["mat_plan_fp"] = hashlib.sha256(
-        str(sorted(params.items())).encode()).hexdigest()[:16]
+        _json.dumps(params, sort_keys=True, ensure_ascii=False,
+                    default=str).encode()).hexdigest()[:16]
     mat["mat_warnings"] = warnings
     return mat
+
+
+# ─────────────────────────────────────────────────────────────
+# M8-R4 · WD 木纹链内联（隔离区 WD_wood.py → 编译器管理资产）
+# 节点带编译器命名（WD_*）——重放按名寻址改参数，不重建不累积。
+# 端口索引教训（源码实锤）：Mix RGBA Factor=inputs[0]/A=[6]/B=[7]/Color=outputs[2]。
+# ─────────────────────────────────────────────────────────────
+def _wd_cfg(proc: dict) -> dict:
+    cfg = dict(_WD_DEFAULTS)
+    for k in ("scale", "distortion", "detail", "bump_strength"):
+        if k in proc:
+            cfg[k] = float(proc[k])
+    for k in ("color_light", "color_dark"):
+        if k in proc:
+            cfg[k] = [float(x) for x in proc[k]]
+    return cfg
+
+
+def _build_wood_chain(mat, nt, bsdf, proc: dict) -> None:
+    cfg = _wd_cfg(proc)
+    wave = next((n for n in nt.nodes if n.name == "WD_Wave"), None)
+    if wave is None:
+        # 首建：Wave(BANDS/X/SIN) ← Noise(Fac 扰动向量)；Mix 混双色 → Base
+        # Color + Bump → Normal（源配方拓扑，V-04 幂等语义由重放路径承担）
+        wave = nt.nodes.new("ShaderNodeTexWave")
+        wave.name = "WD_Wave"
+        wave.location = (-600, 100)
+        wave.wave_type = 'BANDS'
+        wave.bands_direction = 'X'
+        wave.wave_profile = 'SIN'
+        noise = nt.nodes.new("ShaderNodeTexNoise")
+        noise.name = "WD_Noise"
+        noise.location = (-600, -200)
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.name = "WD_Mix"
+        mix.location = (-350, 0)
+        mix.data_type = 'RGBA'
+        mix.blend_type = 'MIX'
+        bump = nt.nodes.new("ShaderNodeBump")
+        bump.name = "WD_Bump"
+        bump.location = (-100, -250)
+        nt.links.new(noise.outputs['Fac'], wave.inputs['Vector'])
+        nt.links.new(wave.outputs['Fac'], mix.inputs[0])
+        nt.links.new(mix.outputs[2], bsdf.inputs['Base Color'])
+        nt.links.new(mix.outputs[2], bump.inputs['Height'])
+        nt.links.new(bump.outputs['Normal'], bsdf.inputs['Normal'])
+    noise = nt.nodes["WD_Noise"]
+    mix = nt.nodes["WD_Mix"]
+    bump = nt.nodes["WD_Bump"]
+    # 参数重放（每次都写——幂等：同 plan 同值，异 plan 校正）
+    wave.inputs['Scale'].default_value = cfg["scale"]
+    wave.inputs['Distortion'].default_value = cfg["distortion"]
+    wave.inputs['Detail'].default_value = cfg["detail"]
+    noise.inputs['Scale'].default_value = 2.0
+    noise.inputs['Detail'].default_value = 3.0
+    mix.inputs[6].default_value = (*cfg["color_light"], 1.0)
+    mix.inputs[7].default_value = (*cfg["color_dark"], 1.0)
+    bump.inputs['Strength'].default_value = cfg["bump_strength"]
+    mat["wd_fp"] = hashlib.sha256(str(sorted(cfg.items())).encode()).hexdigest()[:16]
 
 
 def material_fingerprint(mat) -> str:
@@ -234,4 +363,18 @@ def material_fingerprint(mat) -> str:
         else:
             v = round(float(v), 5)
         parts.append(f"{key}={v}")
+    # M8-R4：WD 木纹链对账（存在 WD_Wave 即为 procedural 产物——读回实参）
+    wave = next((n for n in mat.node_tree.nodes if n.name == "WD_Wave"), None)
+    if wave is not None:
+        mix = mat.node_tree.nodes["WD_Mix"]
+        bump = mat.node_tree.nodes["WD_Bump"]
+        light = tuple(round(float(x), 5) for x in mix.inputs[6].default_value[:3])
+        dark = tuple(round(float(x), 5) for x in mix.inputs[7].default_value[:3])
+        parts.append(
+            "proc=wood"
+            f"/scale={wave.inputs['Scale'].default_value:.4f}"
+            f"/dist={wave.inputs['Distortion'].default_value:.4f}"
+            f"/detail={wave.inputs['Detail'].default_value:.4f}"
+            f"/light={light}/dark={dark}"
+            f"/bump={bump.inputs['Strength'].default_value:.4f}")
     return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
