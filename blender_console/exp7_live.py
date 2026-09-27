@@ -2,7 +2,7 @@
 =================================================================
 
 跑法：blender.exe -b --factory-startup -P exp7_live.py
-产出：result JSON -> 2026-09-26-blender/exp7_craft_gates_result.json
+产出：result JSON -> results/exp7_craft_gates_result.json
 
 实验问题（隔离区吸收，上游 research-craft"工艺的元层"）：
   工艺门禁对"返工成本左移"的实际效果——同一工艺违例在三组治理下的
@@ -44,7 +44,7 @@ from gn_adapter import GNAdapter
 from console import Console
 from director import DirectorSession, NormalPolicy
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 ROWS: list[dict] = []
 REPORT: dict[str, dict] = {}
 

@@ -38,7 +38,7 @@ from gn_adapter import GNAdapter, ParamSpec  # noqa: E402
 from gn_console import GNConsole, SPECS  # noqa: E402
 from gn_verify import GeometryVerifier  # noqa: E402
 
-OUT = ROOT.parent / "2026-09-26-blender" / "gn_ab_result.json"
+OUT = ROOT / "results" / "gn_ab_result.json"
 ROWS: list[dict[str, Any]] = []
 
 

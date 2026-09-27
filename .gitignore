@@ -43,3 +43,6 @@ blender_server_log.txt
 /算法路线调研/
 /预调研/
 /上游隔离区/
+
+# 验收结果落盘（运行时产物，不入库）
+results/

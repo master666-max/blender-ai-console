@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 import bpy
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 rep = {}
 ng = bpy.data.node_groups.new("_probe3", "GeometryNodeTree")
 

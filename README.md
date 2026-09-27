@@ -48,7 +48,9 @@ cd m9_web && node _selftest.mjs         # 42/42
 
 纯 Python 单测（无 bpy 依赖）：`python blender_console/test_upstream_store.py`
 
-跑通即验收——每套 `_live.py` 都在真实 Blender 5.2 会话里断言。全仓库路径均相对仓库根推导，不含任何机器相关的绝对路径。
+**环境要求**：真机验收需 Blender 5.x（自带 Python ≥3.10）；纯单测与 Web 自检只需 Python 3.10+ / Node 18+。MCP 起桥入口：Windows `m8_bridge\start_gn_bridge.bat`，macOS/Linux `m8_bridge/start_gn_bridge.sh`——两者都会自动探测 Blender，找不到时设环境变量 `BLENDER_EXE` 指向可执行文件即可。
+
+跑通即验收——每套 `_live.py` 都在真实 Blender 5.2 会话里断言。全仓库路径均相对仓库根推导，不含任何机器相关的绝对路径；验收结果统一落盘到仓库内 `results/`。
 
 ## 架构
 

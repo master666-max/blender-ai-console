@@ -24,7 +24,7 @@ from intake import IntakeSession, DOMAIN_BANK  # noqa: E402
 from gn_adapter import GNAdapter  # noqa: E402
 from console import Console  # noqa: E402
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 ROWS: list[dict] = []
 
 

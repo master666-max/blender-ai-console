@@ -34,7 +34,7 @@ from console import Console
 from op_compiler import spec_field_whitelist
 from mat_compiler import compile_material, material_fingerprint
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 ROWS: list[dict] = []
 
 

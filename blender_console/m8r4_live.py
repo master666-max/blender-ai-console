@@ -2,7 +2,7 @@
 ======================================================================
 
 跑法：blender.exe -b --factory-startup -P m8r4_live.py
-产出：result JSON -> 2026-09-26-blender/m8r4_live_result.json
+产出：result JSON -> results/m8r4_live_result.json
 
 工单口径（v2.15 L317 遗留 + 交接文档 §11）：nodes/WD_wood → op 库候选
 （落 mat_compiler procedural 路径，M4-11"材质=op=节点"纪律）；fragments/
@@ -43,7 +43,7 @@ from mat_compiler import (MaterialConstraintError, compile_material,
                           material_fingerprint)
 from presentation import rig_three_point, render_presentation
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 ROWS: list[dict] = []
 
 

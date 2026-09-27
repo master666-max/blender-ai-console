@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 BRIDGE = ROOT / "m8_bridge"
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 RELEASE = ROOT / "release"
 VERSION = "2.1.0-gn"
 

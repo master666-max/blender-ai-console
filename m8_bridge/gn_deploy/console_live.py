@@ -121,5 +121,5 @@ check("export_state", lambda: r7.ok and "steps" in r7.data, True)
 check("export 含 attribution", lambda: len(r7.data.get("attribution", {})), 2)
 
 print(f"\nCONSOLE: {sum(1 for r in ROWS if r['ok'])}/{len(ROWS)} passed")
-out = ROOT.parent / "2026-09-26-blender" / "console_result.json"
+out = ROOT / "results" / "console_result.json"
 out.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -33,7 +33,7 @@ from gn_adapter import GNAdapter
 from console import Console
 from gn_artifact import GNArtifact
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 ROWS: list[dict] = []
 
 

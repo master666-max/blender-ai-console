@@ -48,7 +48,9 @@ cd m9_web && node _selftest.mjs         # 42/42
 
 Pure-Python unit tests (no bpy dependency): `python blender_console/test_upstream_store.py`
 
-Passing these is the acceptance — every `_live.py` suite asserts inside a real Blender 5.2 session. All paths in the codebase are derived relative to the repo root; no machine-specific absolute paths anywhere.
+**Requirements**: live acceptance needs Blender 5.x (bundled Python ≥3.10); pure unit tests and the web self-test only need Python 3.10+ / Node 18+. MCP bridge launchers: Windows `m8_bridge\start_gn_bridge.bat`, macOS/Linux `m8_bridge/start_gn_bridge.sh` — both auto-detect Blender; if not found, set the `BLENDER_EXE` environment variable to the executable.
+
+Passing these is the acceptance — every `_live.py` suite asserts inside a real Blender 5.2 session. All paths in the codebase are derived relative to the repo root; no machine-specific absolute paths anywhere, and acceptance results land in `results/` inside the repo.
 
 ## Architecture
 

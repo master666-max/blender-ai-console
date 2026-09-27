@@ -25,7 +25,7 @@ from gn_adapter import GNAdapter
 from console import Console
 from op_compiler import compile_twice_fingerprint
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 ROWS: list[dict] = []
 PERF: list[dict] = []
 

@@ -49,7 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gn_adapter import GNAdapter, GNValidationError, ParamSpec  # noqa: E402
 from gn_verify import GeometryVerifier  # noqa: E402
 
-OUT = ROOT.parent / "2026-09-26-blender" / "gn_feasibility.json"
+OUT = ROOT / "results" / "gn_feasibility.json"
 LOG: list[str] = []
 DATA: dict[str, Any] = {}
 

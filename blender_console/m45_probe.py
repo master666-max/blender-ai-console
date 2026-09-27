@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机�
 
 import bpy
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 
 all_geo = sorted(n for n in dir(bpy.types) if n.startswith("GeometryNode"))
 sdf_like = [n for n in all_geo if "sdf" in n.lower()]

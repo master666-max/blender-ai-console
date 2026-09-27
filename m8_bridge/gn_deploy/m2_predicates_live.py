@@ -31,7 +31,7 @@ import bmesh  # noqa: E402
 
 from gn_verify import GeometryVerifier, check_dfm, _DFM_LIMITS  # noqa: E402
 
-OUT = ROOT.parent / "2026-09-26-blender"
+OUT = ROOT / "results"
 ROWS: list[dict] = []
 
 

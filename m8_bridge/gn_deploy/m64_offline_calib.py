@@ -1,7 +1,7 @@
 """m64_offline_calib.py — M6-4 离线标定 · EMD-only（R7-2）
 
 跑法：blender.exe -b --factory-startup -P m64_offline_calib.py
-产出：result JSON -> 2026-09-26-blender/m64_offline_calib_result.json
+产出：result JSON -> results/m64_offline_calib_result.json
 
 标定语义（工单 M6-4 口径）：在线代理（32³ 顶点直方图 IoU，experience.bin_features）
 已经真机验证有牙齿（m6_live [5]），本脚本回答的问题是——
@@ -27,7 +27,7 @@ import bpy
 import bmesh
 from mathutils import Vector
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 RES = 128          # 离线体素分辨率（工单口径）
 HBINS = 64         # EMD 直方图 bins
 checks: list[dict] = []

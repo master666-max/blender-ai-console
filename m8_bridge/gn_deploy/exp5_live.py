@@ -2,7 +2,7 @@
 ======================================================================
 
 跑法：blender.exe -b --factory-startup -P exp5_live.py
-产出：result JSON -> 2026-09-26-blender/exp5_live_result.json
+产出：result JSON -> results/exp5_live_result.json
 
 判定标准（工单实验清单 EXP-5 ← d2-algo《算法学 × 增量/缓存/指纹》§四.1）：
   同一 GN 树改 1 参数，对比
@@ -44,7 +44,7 @@ import numpy as np
 from gn_adapter import GNAdapter
 from console import Console
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 ROWS: list[dict] = []
 
 

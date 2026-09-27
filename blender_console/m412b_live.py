@@ -2,7 +2,7 @@
 ======================================================================
 
 跑法：blender.exe -b --factory-startup -P m412b_live.py
-产出：result JSON -> 2026-09-26-blender/m412b_live_result.json
+产出：result JSON -> results/m412b_live_result.json
 
 验收矩阵（v2.15⑥ 登记的"console 段落级集成"闭环）：
   [1] schema 白名单：plan_schema 放行段落级 rig_json（拼错字段仍拦截）
@@ -29,7 +29,7 @@ from plan_schema import PlanSchema
 from gn_adapter import GNAdapter
 from console import Console
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 ROWS: list[dict] = []
 
 

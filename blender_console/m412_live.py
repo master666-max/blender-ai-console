@@ -2,7 +2,7 @@
 ==========================================================================
 
 跑法：blender.exe -b --factory-startup -P m412_live.py
-产出：result JSON -> 2026-09-26-blender/m412_live_result.json
+产出：result JSON -> results/m412_live_result.json
 
 验收矩阵（工单 M4-12 口径 + R7-1 probe 实锤）：
   [1] 纯 Python 校验层：合法 plan 归一化 + 6 类结构化反例（响亮失败不静默）
@@ -40,7 +40,7 @@ sys.path.insert(0, str(HERE))
 import rig_compiler
 from rig_compiler import RigConstraintError, normalize_rig_plan, compile_rig, rig_fingerprint
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 RES = 128
 checks: list[dict] = []
 

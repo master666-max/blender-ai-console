@@ -1,7 +1,7 @@
 """m412_probe.py — M4-12 Rigify 5.2 API 漂移探针（R7-1 · go/no-go 依据）
 
 跑法：blender.exe -b --factory-startup -P m412_probe.py
-产出：result JSON -> 2026-09-26-blender/m412_probe_result.json
+产出：result JSON -> results/m412_probe_result.json
 
 M4-12 需要的四件能力（工单口径）：
   A. rigify addon 可启用（版本/结构）
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机�
 
 import bpy
 
-RESULTS = ROOT.parent / "2026-09-26-blender"
+RESULTS = ROOT / "results"
 
 checks: list[dict] = []
 

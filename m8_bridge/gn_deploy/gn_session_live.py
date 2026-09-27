@@ -247,7 +247,7 @@ def main() -> None:
     # ── 10. export_state（M9-4a）────────────────────────────
     print("\n[10] export_state → Web 契约")
     st = ses.export_state()
-    out = ROOT.parent / "2026-09-26-blender" / "gn_session_state.json"
+    out = ROOT / "results" / "gn_session_state.json"
     out.write_text(json.dumps(st, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     check("schema = mug-console-state/1.1", lambda: st["schema"], "mug-console-state/1.1")
     check("kpis 在场（M10-4）", lambda: "kpis" in st, True)
@@ -261,7 +261,7 @@ def main() -> None:
     print(f"\nGN-SESSION LIVE: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
     for f in failed:
         print("  FAILED:", f["case"], "->", f["detail"])
-    out2 = ROOT.parent / "2026-09-26-blender" / "gn_session_live_result.json"
+    out2 = ROOT / "results" / "gn_session_live_result.json"
     out2.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     print("result ->", out2)
 

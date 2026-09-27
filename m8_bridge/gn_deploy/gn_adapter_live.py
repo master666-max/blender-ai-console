@@ -275,6 +275,6 @@ if failed:
     for f in failed:
         print("  FAILED:", f["case"], "->", f["detail"])
 
-out = ROOT.parent / "2026-09-26-blender" / "gn_adapter_live_result.json"
+out = ROOT / "results" / "gn_adapter_live_result.json"
 out.write_text(json.dumps(RESULTS, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 print("result ->", out)
