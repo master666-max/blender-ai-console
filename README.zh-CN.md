@@ -71,7 +71,6 @@ cd m9_web && node _selftest.mjs         # 42/42
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | 部署载荷（55 py，与主线 diff 校验一致） |
 | [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
 | [`release/`](release/) | 发布 manifest（147 文件五层清单） |
-| [`docs/img/`](docs/img/) | 本 README 使用的渲染帧 |
 | [`上游隔离区/`](<上游隔离区/>) | 只读上游素材（机制库 / 工艺库）——只吸收、不 import |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | 支撑设计决策的学术预调研 |
 | 工单 / 交接文档 / 进度规划 | 决策记录、验收口径、诚实缺口登记 |

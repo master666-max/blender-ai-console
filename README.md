@@ -71,7 +71,6 @@ All paths in the codebase are derived relative to the repo root — no machine-s
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | Deployment payload (55 py, diff-checked against mainline) |
 | [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
 | [`release/`](release/) | Release manifest (147-file five-layer inventory) |
-| [`docs/img/`](docs/img/) | Rendered frames used in this README |
 | [`上游隔离区/`](<上游隔离区/>) | Read-only upstream material (mechanism & craft library) — absorbed, never imported |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | Academic pre-research backing the design decisions |
 | Work-order / handover / planning ledgers | Decision records, acceptance criteria, honest known-gaps |
