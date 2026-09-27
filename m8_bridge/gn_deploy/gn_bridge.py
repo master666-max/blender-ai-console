@@ -25,8 +25,23 @@ def _ensure_console_module():
     if DEPLOY_ROOT and str(DEPLOY_ROOT) not in sys.path:
         sys.path.insert(0, str(DEPLOY_ROOT))
     for mod in ("m1_core", "gn_adapter", "gn_verify", "experience", "plan_schema",
-                "op_compiler", "render_diff", "gn_session", "console", "director"):
+                "op_compiler", "render_diff", "gn_session", "console", "director",
+                "ui_panel"):
         importlib.import_module(mod)
+
+
+def _panel_attach() -> str:
+    """M9-2：N 面板挂载（注册幂等 + 绑定当前会话）。失败不阻塞工具面
+    （热拔插原则：缺省零依赖），但结果**显式返回**不静默。"""
+    try:
+        ui = importlib.import_module("ui_panel")
+        if not ui.is_registered():
+            ui.register()
+        if _STATE["console"] is not None:
+            ui.bind(_STATE["console"])
+        return "bound"
+    except Exception as exc:  # noqa: BLE001
+        return f"unavailable: {exc!r}"[:120]
 
 
 def _get_console_module():
@@ -65,7 +80,8 @@ def gn_begin(obj_name: str = "Mug", brief: str = "",
         _STATE["console"].attach_experience(
             library_dir=Path(library_dir) / "experience_library.jsonl")
     return {"ok": True, "obj": obj_name, "policy": policy,
-            "director": _STATE["director"].policy.name}
+            "director": _STATE["director"].policy.name,
+            "panel": _panel_attach()}
 
 
 def gn_reset(obj_name: str | None = None) -> dict:
@@ -89,6 +105,10 @@ def gn_reset(obj_name: str | None = None) -> dict:
     _STATE["console"] = None
     _STATE["director"] = None
     _STATE["obj"] = None
+    try:
+        importlib.import_module("ui_panel").unbind()   # 面板不得显示 stale 会话
+    except Exception:  # noqa: BLE001  模块未加载过——无可解绑
+        pass
     return {"ok": True, "obj": name, "removed_modifiers": removed}
 
 

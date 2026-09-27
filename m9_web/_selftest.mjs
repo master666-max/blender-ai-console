@@ -1,5 +1,5 @@
 // m9_web 无头自检：从 index.html 抽出 <script>，验证纯函数与演示数据。
-// 跑法：node _selftest.mjs（R5 起 25 → 39 项：+M10-5 三级披露 / dagre 布局质量 / 优先级回归）
+// 跑法：node _selftest.mjs（R5 起 25 → 42 项：+M10-5 三级披露 / dagre 布局质量 / 优先级回归）
 import { readFileSync } from "node:fs";
 
 const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
