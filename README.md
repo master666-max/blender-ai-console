@@ -127,7 +127,6 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 This project stands on the shoulders of:
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)** (MIT, © 2025 Siddharth Ahuja) — the transport layer (sandbox, telemetry, consent and config modules) is vendored under [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/) and extended with 8 GN tool bindings; its original license notice is preserved in that directory's [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE).
-- **blender-mcp-skill v2.9.4** — the author's own earlier skill project. Its craft library, mechanism fragments and experience entries (EXP-001~014) were reviewed item-by-item and absorbed into the mainline (ideas first, code per review verdict); the read-only review archive is kept verbatim under [`上游隔离区/`](<上游隔离区/>) — absorbed, never imported.
 - **[Blender](https://www.blender.org/)** and the bpy community — the substrate everything runs on.
 
 ## License

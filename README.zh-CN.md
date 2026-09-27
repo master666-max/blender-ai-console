@@ -127,7 +127,6 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**29 �
 本项目站在以下工作的肩膀上：
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
-- **blender-mcp-skill v2.9.4**——同一作者的先行 skill 项目。其工艺库、机制片段与经验条目（EXP-001~014）经逐项人工审查后进入主线（思想优先，代码按审查判定吸收）；只读审查档案以逐字快照保留于 [`上游隔离区/`](<上游隔离区/>)——只吸收、不 import。
 - **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
 
 ## License
