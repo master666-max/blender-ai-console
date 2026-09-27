@@ -37,7 +37,7 @@ Most "AI + Blender" integrations let the LLM write and execute bpy scripts. It w
 | 5 | **Same-camera render diff as ground truth** | Verification uses fixed-camera Workbench renders + perceptual hashing. A separate presentation rig (three-point lighting, DOF) coexists with the diff pipeline — **restored after every render, 0-pixel drift cross-validated**. | M3 + M9-3 cross-check (dhash identical) |
 | 6 | **Negative results are deliverables** | Experiments that fail are documented as pit-avoidance assets: the vertex-fingerprint study (Gear/FastCDC vs full recompute) concluded "don't ship it" and surfaced a Morton thin-layer scattering finding; the Delta-Mush removal in Blender 5.2 was adjudicated to Corrective Smooth. | EXP-5 (6/6), EXP-7 (3/3), adjudication ledger |
 
-Plus one rule that shapes the whole repo: **the upstream isolation zone** — third-party code is absorbed, never imported, with provenance tracked.
+Plus one rule that shapes the whole repo: **the upstream-isolation discipline** — third-party code is absorbed, never imported, with provenance tracked (see [Acknowledgments](#acknowledgments)).
 
 ## Architecture
 
@@ -91,7 +91,6 @@ All paths in the codebase are derived relative to the repo root — no machine-s
 | [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
 | [`release/`](release/) | Release manifest (147-file five-layer inventory) |
 | [`docs/img/`](docs/img/) | Rendered frames used in this README |
-| [`上游隔离区/`](<上游隔离区/>) | Read-only upstream material (mechanism & craft library) — absorbed, never imported |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | Academic pre-research backing the design decisions |
 | Work-order / handover / planning ledgers | Decision records, acceptance criteria, honest known-gaps |
 
@@ -121,6 +120,14 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 - [x] R7 deep water: character pipeline (incl. console integration) / EMD calibration / BIM predicates / material assets / vertex-fingerprint verdict
 - [ ] M9-5 flicker vs side-by-side preference A/B (flicker.html ready; needs human experiment)
 - [ ] Long-term: annotation back-reference · audio channel · HAMT · ARKit-52 blendshapes · multi-rig coexistence
+
+## Acknowledgments
+
+This project stands on the shoulders of:
+
+- **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)** (MIT, © 2025 Siddharth Ahuja) — the transport layer (sandbox, telemetry, consent and config modules) is vendored under [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/) and extended with 8 GN tool bindings; its original license notice is preserved in that directory's [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE).
+- **blender-mcp-skill v2.9.4** — an upstream skill package whose craft library, mechanism fragments and experience entries (EXP-001~014) were reviewed item-by-item and absorbed *as ideas* into the mainline — never imported, never redistributed verbatim.
+- **[Blender](https://www.blender.org/)** and the bpy community — the substrate everything runs on.
 
 ## License
 

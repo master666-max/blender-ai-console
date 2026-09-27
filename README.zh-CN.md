@@ -37,7 +37,7 @@
 | 5 | **同机位渲染 diff 作为地面真值** | 验证用固定机位 Workbench 渲染 + 感知哈希；呈现档（三点布光 + DOF）与 diff 管线两档并存——**每次渲染后恢复状态，互证 0 像素漂移**。 | M3 + M9-3 互证（dhash 一致） |
 | 6 | **负结果也是交付物** | 失败的实验被沉淀为防坑资产：顶点指纹研究（Gear/FastCDC vs 全量重算）结论"不接入"并发现 Morton 薄层散射；Blender 5.2 移除 Delta Mush 后裁决 Corrective Smooth 替代。 | EXP-5（6/6）、EXP-7（3/3）、裁决台账 |
 
-另有一条塑造全仓库的纪律：**上游隔离区**——第三方代码只吸收、不 import，来源全程可溯。
+另有一条塑造全仓库的纪律：**上游隔离纪律**——第三方代码只吸收、不 import，来源全程可溯（见[致谢](#致谢)）。
 
 ## 架构
 
@@ -91,7 +91,6 @@ cd m9_web && node _selftest.mjs         # 42/42
 | [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
 | [`release/`](release/) | 发布 manifest（147 文件五层清单） |
 | [`docs/img/`](docs/img/) | 本 README 使用的渲染帧 |
-| [`上游隔离区/`](<上游隔离区/>) | 只读上游素材（机制库 / 工艺库）——只吸收、不 import |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | 支撑设计决策的学术预调研 |
 | 工单 / 交接文档 / 进度规划 | 决策记录、验收口径、诚实缺口登记 |
 
@@ -121,6 +120,14 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**29 �
 - [x] R7 深水区：角色管线（含 console 集成）/ EMD 标定 / BIM 谓词 / 材质素材 / 顶点指纹判定
 - [ ] M9-5 闪烁 vs 并排偏好 A/B（flicker.html 已就绪，待真人实验）
 - [ ] 远期：标注反查 · 声音通道 · HAMT · ARKit-52 表情 schema · 多 rig 共存
+
+## 致谢
+
+本项目站在以下工作的肩膀上：
+
+- **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
+- **blender-mcp-skill v2.9.4**——上游 skill 包，其工艺库、机制片段与经验条目（EXP-001~014）经逐项人工审查后以**思想吸收**方式进入主线——不 import、不逐字再分发。
+- **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
 
 ## License
 

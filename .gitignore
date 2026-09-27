@@ -34,3 +34,6 @@ m8_bridge/*_result.json
 m8_bridge/*.whl
 blender_server_log.txt
 *_wal*/
+
+# 上游隔离区（第三方只读档案，license 不明，不入公开仓库——本地保留）
+上游隔离区/
