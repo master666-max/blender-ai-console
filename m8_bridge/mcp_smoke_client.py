@@ -3,7 +3,7 @@
 链路：mcp ClientSession(stdio) → server.py(FastMCP) → TCP 9876 →
       addon handlers → gn_bridge → blender_console（导演会话）
 
-验证：initialize → tools/list(10 gn) → gn_begin → gn_compile(T1) → gn_verify →
+验证：initialize → tools/list(11 gn) → gn_begin → gn_compile(T1) → gn_verify →
       gn_render_diff → gn_export_state → gn_accept 状态机（T3 拒绝路径预期）。
 """
 import asyncio

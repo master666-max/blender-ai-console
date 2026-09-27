@@ -238,7 +238,11 @@ class PlanSchema:
         if not isinstance(sections, list):
             return
         ids = [s.get("id", "") for s in sections if isinstance(s, Mapping)]
-        id_set = set(ids)
+        # M9-1b 接线修复（m9_intake_live 实锤）：依赖合法目标 = 本次载荷 sections
+        # ∪ segment_names（会话中已编译段）——增量编译（console.compile 单段模式）
+        # 带 depends_on 指向前段时，前段不在本次载荷里，此前被误判 MISSING_DEPENDENCY。
+        # 已编译段必已通过环检且不可回边，并入 id_set 不影响 CYCLE 检测。
+        id_set = set(ids) | set(self.segment_names)
 
         for i, sec in enumerate(sections):
             if not isinstance(sec, Mapping):

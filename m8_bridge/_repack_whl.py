@@ -1,4 +1,9 @@
-"""从 brickfly_mcp_src 重打包 whl（2.0.2-gn）+ 同步 site-packages + 验证 10 工具"""
+"""从 brickfly_mcp_src 重打包 whl（M8-R6 发布定版 2.1.0-gn）+ 同步 site-packages + 验证 11 工具
+
+R6 定版说明：工具面 11 个（v2.3 加 gn_reset 起），本脚本自 2.0.3 起未随 expect 同步——
+历史脚本 expect 只有 10 个是**过时断言**（2.0.3 实际打包时手工核过 11 工具），
+本次修正为 11 工具单一定版事实源。
+"""
 import asyncio
 import shutil
 import zipfile
@@ -6,7 +11,7 @@ from pathlib import Path
 
 BRIDGE = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-21-02-58/m8_bridge")
 SRC_PKG = BRIDGE / "brickfly_mcp_src" / "brickfly_mcp"
-OUT_WHL = BRIDGE / "brickfly_mcp-2.0.3-gn-py3-none-any.whl"
+OUT_WHL = BRIDGE / "brickfly_mcp-2.1.0-gn-py3-none-any.whl"
 SP = BRIDGE / ".venv-mcp" / "Lib" / "site-packages"
 
 # 1. 重打包（whl=zip，包根 brickfly_mcp/）
@@ -37,5 +42,6 @@ gn = sorted(n for n in names if n.startswith("gn_"))
 print("total tools:", len(names))
 print("gn tools (%d):" % len(gn), gn)
 expect = {"gn_begin", "gn_compile", "gn_verify", "gn_checkpoint", "gn_revert",
-          "gn_render_diff", "gn_ab_prepare", "gn_ab_commit", "gn_accept", "gn_export_state"}
-print("RESULT:", "OK 10/10" if set(gn) == expect else "MISMATCH: " + str(set(gn) ^ expect))
+          "gn_render_diff", "gn_ab_prepare", "gn_ab_commit", "gn_accept", "gn_export_state",
+          "gn_reset"}
+print("RESULT:", "OK 11/11" if set(gn) == expect else "MISMATCH: " + str(set(gn) ^ expect))

@@ -1,0 +1,787 @@
+{
+  "release": "2.1.0-gn",
+  "built_at": "2026-09-27 23:19",
+  "whl": {
+    "file": "brickfly_mcp-2.1.0-gn-py3-none-any.whl",
+    "bytes": 111223,
+    "sha256": "f6fb592cd5c16b7dffd65f961eec53767e576da779f20ac6c39fa1e12cc65ed9",
+    "content_note": "与 2.0.3-gn 内容逐文件 SHA256 等价（11 文件）；定版=版本号固化，非代码变更"
+  },
+  "tool_surface": {
+    "gn_tools": [
+      "gn_begin",
+      "gn_compile",
+      "gn_verify",
+      "gn_checkpoint",
+      "gn_revert",
+      "gn_render_diff",
+      "gn_ab_prepare",
+      "gn_ab_commit",
+      "gn_accept",
+      "gn_export_state",
+      "gn_reset"
+    ],
+    "count": 11,
+    "verified": "repack 11/11 + 冒烟 16/16 + e2e 16/16（2.1.0-gn 时点重跑）"
+  },
+  "layer1_code_main": {
+    "desc": "主体资产：blender_console 全模块 + m9_web 前端 + 桥接三件",
+    "files": [
+      {
+        "path": "blender_console/_probe_intake_schema.py",
+        "bytes": 657,
+        "sha256": "c23d88bc6d10756ac8cfaa624ecfeb98139424e268d632912cab4f0a79b77966"
+      },
+      {
+        "path": "blender_console/_probe_modprop.py",
+        "bytes": 461,
+        "sha256": "5adb780dd026a8c7a1180476f0a7fb62e2c31dd3c6700054a63bfc1d94cb5162"
+      },
+      {
+        "path": "blender_console/console.py",
+        "bytes": 51726,
+        "sha256": "6fb67c1dc9b0d33ff15678220bb3180b6c98ae9b6b1458bbb941c79434dde90d"
+      },
+      {
+        "path": "blender_console/console_live.py",
+        "bytes": 5453,
+        "sha256": "34d7dc2827c02e5dc07e30b5be9f6d369fe6a481b3b8bd750e4be8a4b181b0e0"
+      },
+      {
+        "path": "blender_console/core_types.py",
+        "bytes": 32174,
+        "sha256": "3d72195157bf9f4e5f0cb4e19bc6a6eaf504f47839a732b861681f70f8e7f3ac"
+      },
+      {
+        "path": "blender_console/director.py",
+        "bytes": 17248,
+        "sha256": "2a886a163f09fb2081dab666777d81e8d4804e2610d9d915b9b70db9a6a30450"
+      },
+      {
+        "path": "blender_console/escape.py",
+        "bytes": 11942,
+        "sha256": "29cf1b7bb809627ed6d0243fa5625baaa538395d6c9a54a02c8b463681a5fe50"
+      },
+      {
+        "path": "blender_console/experience.py",
+        "bytes": 21032,
+        "sha256": "11ae2a6ffa37f67be964507f6ac4f3cf48b3a239a1f62630394d45b7a012b471"
+      },
+      {
+        "path": "blender_console/gn_ab.py",
+        "bytes": 15822,
+        "sha256": "377b495a7e964943e72082a471345f54619a513f4f56db5f879e94408b5eb660"
+      },
+      {
+        "path": "blender_console/gn_adapter.py",
+        "bytes": 31055,
+        "sha256": "55d9f6da2a8cdf72c9902a1de12bb3bab593d0a2c8029cecee3fc51ec17cf61a"
+      },
+      {
+        "path": "blender_console/gn_adapter_live.py",
+        "bytes": 10918,
+        "sha256": "0b7979c8dd8a047888279537e433b491048f38fbe8ca2774b29cf452e43302b9"
+      },
+      {
+        "path": "blender_console/gn_artifact.py",
+        "bytes": 5133,
+        "sha256": "8fc88b053b9932d3e1e76d90080de7aae4b5794ab89408aeb5cc035ee96dc7a9"
+      },
+      {
+        "path": "blender_console/gn_console.py",
+        "bytes": 22522,
+        "sha256": "f4a7bb132040302645e978bd80611935ea777ebf783514210cb31d3502169ef5"
+      },
+      {
+        "path": "blender_console/gn_session.py",
+        "bytes": 31462,
+        "sha256": "7306bf93f5daca0ca247c0399af9b64065261c960789b83afcf54f3128ec33ac"
+      },
+      {
+        "path": "blender_console/gn_session_live.py",
+        "bytes": 14824,
+        "sha256": "a9011c45c806a7213681ead96a0bb6ba71cb8fd702f38780f57663df80cbf900"
+      },
+      {
+        "path": "blender_console/gn_verify.py",
+        "bytes": 14876,
+        "sha256": "f066e4fca15b2976443aea2a6bd31745f7214ce13422f4294cdd4a3dfe8eb1c1"
+      },
+      {
+        "path": "blender_console/intake.py",
+        "bytes": 12672,
+        "sha256": "44b870ce6a96eeb45e6766b1e8adb4583ef965834473bbf2778788cc7351031b"
+      },
+      {
+        "path": "blender_console/m1_core.py",
+        "bytes": 32814,
+        "sha256": "3825f7531792d7ca86bfe6847cc8d55c341f7701ff491c89c90f7fc646bd4ee0"
+      },
+      {
+        "path": "blender_console/m2_dfm_probe.py",
+        "bytes": 2078,
+        "sha256": "06b498d47981c31ef9601ad5537bedf79bd7183032ca4bbf63b51f8972ff45e2"
+      },
+      {
+        "path": "blender_console/m2_edge_live.py",
+        "bytes": 3903,
+        "sha256": "038330ff53ee241ff91060ee38d1f1f77a31bb66f6de153f4028502d302ec4fc"
+      },
+      {
+        "path": "blender_console/m2_predicates_live.py",
+        "bytes": 13478,
+        "sha256": "5ee03d789566a87c4622b2373a87883aad944da5106298e0696cf51fb58a64d9"
+      },
+      {
+        "path": "blender_console/m36_live.py",
+        "bytes": 7442,
+        "sha256": "3d16d4719b6cc2b61206baa6b9aa845f60fe667fd9b3c07d964e4f3f104d82aa"
+      },
+      {
+        "path": "blender_console/m411_live.py",
+        "bytes": 9073,
+        "sha256": "25d3c29ff61b37e182857552324be1291051d18da60418aef386bae735fdd091"
+      },
+      {
+        "path": "blender_console/m413_live.py",
+        "bytes": 5541,
+        "sha256": "cd598f879a2e8bf779c7924637d6a9d54ae9859d8aa98d5a2a39419eb39823af"
+      },
+      {
+        "path": "blender_console/m42_live.py",
+        "bytes": 7484,
+        "sha256": "ddd67f54c45bc4a750352ae4b58e7fa0f7f502842450a89dd8c92986a6aec993"
+      },
+      {
+        "path": "blender_console/m45_live.py",
+        "bytes": 8016,
+        "sha256": "f6c0c7b49585cebac834cb6e37093aa3f27a99cf34a6efccc4a667a945be1392"
+      },
+      {
+        "path": "blender_console/m45_probe.py",
+        "bytes": 2064,
+        "sha256": "4d956c6cc0f3c7b0b17481f6dd6f461f9e59da40cd94af4ece306390766bea8d"
+      },
+      {
+        "path": "blender_console/m45_probe2.py",
+        "bytes": 1258,
+        "sha256": "8c4c2a4c9594c774a811ee6ce815b39761ee26d6d48d68a6cbdd615bd17443a1"
+      },
+      {
+        "path": "blender_console/m45_probe3.py",
+        "bytes": 2950,
+        "sha256": "f4e8864a8c8a83aab2abec5bba50df1d8e7a1e243e651b6ad3557a8c1ad6fc27"
+      },
+      {
+        "path": "blender_console/m4_compile_live.py",
+        "bytes": 10667,
+        "sha256": "b880989ae331a95d8d3f6b0988ff0080fb03deab5ab487990ac6d94d1b33a5e7"
+      },
+      {
+        "path": "blender_console/m5_ab_live.py",
+        "bytes": 10336,
+        "sha256": "9f09734e7f49a3c02223da384348f465f762497e3cb4ac4b00960b4f3cc7007f"
+      },
+      {
+        "path": "blender_console/m5_spec_live.py",
+        "bytes": 9433,
+        "sha256": "af6fca07ef26aebb79919ad768d17ade42a4451d0645b2606522a4b914ea1a45"
+      },
+      {
+        "path": "blender_console/m6_live.py",
+        "bytes": 11438,
+        "sha256": "1296b8ba183d190fb20cb4970585edda680285a98aee21e98f6263aa71db7c01"
+      },
+      {
+        "path": "blender_console/m7_director_live.py",
+        "bytes": 11316,
+        "sha256": "b0cfa21afb1215e2898ff28c424c6de442b2a8075216cce37227010641738e17"
+      },
+      {
+        "path": "blender_console/m7v2_live.py",
+        "bytes": 8980,
+        "sha256": "85e049e02c73012f981da0bd227ee748929d873bdcfead40add9adb6ec63cd17"
+      },
+      {
+        "path": "blender_console/m92_live.py",
+        "bytes": 6916,
+        "sha256": "f430492c90833b1fa4b6abec1ab99d902f3d337c9fc77a26fe293987c82e4c2b"
+      },
+      {
+        "path": "blender_console/m9_intake_live.py",
+        "bytes": 6049,
+        "sha256": "b6276890f0afbc6ba8855135443fbdc25b0deae26e4f631ade1ef6da3f628265"
+      },
+      {
+        "path": "blender_console/mat_compiler.py",
+        "bytes": 12428,
+        "sha256": "926843d177c51429f1761cdb6785bdd8d9de579eb6fd2b5a4d9b52f48ede0a63"
+      },
+      {
+        "path": "blender_console/op_compiler.py",
+        "bytes": 26008,
+        "sha256": "24550b9272d4e0ed74d458204014828a32ff2af4a8e2f716135b3ba87b5bc0b2"
+      },
+      {
+        "path": "blender_console/plan_schema.py",
+        "bytes": 15866,
+        "sha256": "e5c5e05d533f1c2551e7a595bb5570c43f3f20702f147b54969e0b50a52e9ae5"
+      },
+      {
+        "path": "blender_console/postfx.py",
+        "bytes": 9247,
+        "sha256": "da5014acde3ad1dacf78d16c7f0003c0ef81a55115753ef3dcefedba11aadbe2"
+      },
+      {
+        "path": "blender_console/render_diff.py",
+        "bytes": 13232,
+        "sha256": "dacf9261515accace3509987421dc78a5ee17ab5099daa6a563fb8d3efa1b100"
+      },
+      {
+        "path": "blender_console/render_diff_live.py",
+        "bytes": 8187,
+        "sha256": "cf7788bfdd1e39716b8819ba3b345a5d024b6c55514a87f5db23ad71b46ef8fd"
+      },
+      {
+        "path": "blender_console/test_escape.py",
+        "bytes": 4448,
+        "sha256": "1d6b5f52c0b24c55ce2a331aaa6747e8bd512e0c33dbae767caf1503d31bec4e"
+      },
+      {
+        "path": "blender_console/test_experience.py",
+        "bytes": 14158,
+        "sha256": "d9e804d8dfbd4fdac1c64817da80dffe3d400f2ecc0bed3c7bbb3f18d42fdd6b"
+      },
+      {
+        "path": "blender_console/test_intake.py",
+        "bytes": 5938,
+        "sha256": "9f242b46603fe9db0b54ea06ad10e58d91e7e5485b6d40c4f86bf4cd214b23e6"
+      },
+      {
+        "path": "blender_console/test_upstream_store.py",
+        "bytes": 4412,
+        "sha256": "b949a80d89956915de4a8bf0790e2b2f7176e6d3ce80dee948ce3437de8b2f40"
+      },
+      {
+        "path": "blender_console/ui_panel.py",
+        "bytes": 7006,
+        "sha256": "a7a6342133fb8429554fee1acab7189f67b71438d47a55838a2b293587696424"
+      },
+      {
+        "path": "blender_console/upstream_store.py",
+        "bytes": 7542,
+        "sha256": "79f4bea92eeb24262e698cf6c09bd44208e7864cdf61aad9be4038beb0672503"
+      },
+      {
+        "path": "m9_web/_selftest.mjs",
+        "bytes": 7414,
+        "sha256": "c552162bd233915f7501469cf8c8c7f4377641ae538caf149ff9d8be7c8e3df5"
+      },
+      {
+        "path": "m9_web/flicker.html",
+        "bytes": 7156,
+        "sha256": "c5472c4bfbb71de1e1a53bbf93da7e383fdf50356d5dd9716a54792682b61da8"
+      },
+      {
+        "path": "m9_web/index.html",
+        "bytes": 27671,
+        "sha256": "8746e1a1e77b2173d3b85cafe94eeabd651872290e22258b7f212db2be7cb3c3"
+      },
+      {
+        "path": "m9_web/README.md",
+        "bytes": 1622,
+        "sha256": "15e5a9dbdd6731fb8a70e34d75000706dc29f56151f55a08e8a66638159b1362"
+      },
+      {
+        "path": "m9_web/state.json",
+        "bytes": 2782,
+        "sha256": "a46298011cdde148a90862e3d226ec6112e57e076f26bf8b6fe35fe3391f9eb3"
+      },
+      {
+        "path": "m8_bridge/bootstrap_blender.py",
+        "bytes": 2019,
+        "sha256": "c845908b27f06f0e7a786992462a4a0ad4e8229e81b3a743db324b265b1f7730"
+      },
+      {
+        "path": "m8_bridge/gn_bridge.py",
+        "bytes": 8106,
+        "sha256": "5d391f3b29988da28315bbfa4e5c420ac1afd0b4ace62bb651fc7ded117edf9f"
+      },
+      {
+        "path": "m8_bridge/start_gn_bridge.bat",
+        "bytes": 401,
+        "sha256": "15a61bce17db11e0a08b438e32966b220b67da4ebc64b32f38b673c622e7ed17"
+      }
+    ]
+  },
+  "layer1_code_shell": {
+    "desc": "传输壳（fork Brickfly MCP + gn 工具薄封装，非主体）",
+    "files": [
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/__init__.py",
+        "bytes": 415,
+        "sha256": "ce9a354f526a3a1ec57b63c762ca74f3261599a0ac296567f9d99f773076df02"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/addon_manager.py",
+        "bytes": 17952,
+        "sha256": "8e190d21a4e47fe5f0e80869e784655066200ee07676e98a66fec7e0174f585c"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/bundled/__init__.py",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/bundled/addon.py",
+        "bytes": 204738,
+        "sha256": "8e99f8493afaa0e964aee2a53ed52db070dffd7d2cba6610e0c41eb349ba48a3"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/config.py",
+        "bytes": 917,
+        "sha256": "a70c8e3d707e78fb8fc7cba75425c63cae39f0b03c661c88bdb83d0e93e65907"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/consent_prompt.py",
+        "bytes": 7583,
+        "sha256": "9f6ef0b97ea25596aa18d26d433f2cf7a8e128799ec5e2e6205c652d545533f3"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/safe_mode.py",
+        "bytes": 43987,
+        "sha256": "d3bc1f43f4707476e595efed111d514b3f81bf4358993b8accb18962c5c4bf35"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/server.py",
+        "bytes": 101807,
+        "sha256": "c2aabbaf7e57ebc7276a268a6af83933715a2e7c21a900596de0196eb8c6e867"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/telemetry.py",
+        "bytes": 12852,
+        "sha256": "09c5bc161f85f11c1026741cfe3f0a9899926af5d3fc2f27bec1b57d987849d7"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/telemetry_decorator.py",
+        "bytes": 17439,
+        "sha256": "fea2b67a3524c7c519642148df1edc751a675a236304e5e608d5ad391c3cf902"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp_src/brickfly_mcp/trajectory.py",
+        "bytes": 57820,
+        "sha256": "607d0a1b070c59333e8fffbd9af800b7bf31c5f3bfa28efe7cdc0506ca75fac7"
+      }
+    ]
+  },
+  "layer2_deploy": {
+    "desc": "Blender 侧部署载荷 gn_deploy（与主线零漂移已校验）+ whl 分发件",
+    "files": [
+      {
+        "path": "m8_bridge/gn_deploy/console.py",
+        "bytes": 51726,
+        "sha256": "6fb67c1dc9b0d33ff15678220bb3180b6c98ae9b6b1458bbb941c79434dde90d"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/console_live.py",
+        "bytes": 5453,
+        "sha256": "34d7dc2827c02e5dc07e30b5be9f6d369fe6a481b3b8bd750e4be8a4b181b0e0"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/core_types.py",
+        "bytes": 32174,
+        "sha256": "3d72195157bf9f4e5f0cb4e19bc6a6eaf504f47839a732b861681f70f8e7f3ac"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/director.py",
+        "bytes": 17248,
+        "sha256": "2a886a163f09fb2081dab666777d81e8d4804e2610d9d915b9b70db9a6a30450"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/escape.py",
+        "bytes": 11942,
+        "sha256": "29cf1b7bb809627ed6d0243fa5625baaa538395d6c9a54a02c8b463681a5fe50"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/experience.py",
+        "bytes": 21032,
+        "sha256": "11ae2a6ffa37f67be964507f6ac4f3cf48b3a239a1f62630394d45b7a012b471"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_ab.py",
+        "bytes": 15822,
+        "sha256": "377b495a7e964943e72082a471345f54619a513f4f56db5f879e94408b5eb660"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_adapter.py",
+        "bytes": 31055,
+        "sha256": "55d9f6da2a8cdf72c9902a1de12bb3bab593d0a2c8029cecee3fc51ec17cf61a"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_adapter_live.py",
+        "bytes": 10918,
+        "sha256": "0b7979c8dd8a047888279537e433b491048f38fbe8ca2774b29cf452e43302b9"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_artifact.py",
+        "bytes": 5133,
+        "sha256": "8fc88b053b9932d3e1e76d90080de7aae4b5794ab89408aeb5cc035ee96dc7a9"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_bridge.py",
+        "bytes": 8106,
+        "sha256": "5d391f3b29988da28315bbfa4e5c420ac1afd0b4ace62bb651fc7ded117edf9f"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_console.py",
+        "bytes": 22522,
+        "sha256": "f4a7bb132040302645e978bd80611935ea777ebf783514210cb31d3502169ef5"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_session.py",
+        "bytes": 31462,
+        "sha256": "7306bf93f5daca0ca247c0399af9b64065261c960789b83afcf54f3128ec33ac"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_session_live.py",
+        "bytes": 14824,
+        "sha256": "a9011c45c806a7213681ead96a0bb6ba71cb8fd702f38780f57663df80cbf900"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/gn_verify.py",
+        "bytes": 14876,
+        "sha256": "f066e4fca15b2976443aea2a6bd31745f7214ce13422f4294cdd4a3dfe8eb1c1"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/intake.py",
+        "bytes": 12672,
+        "sha256": "44b870ce6a96eeb45e6766b1e8adb4583ef965834473bbf2778788cc7351031b"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m1_core.py",
+        "bytes": 32814,
+        "sha256": "3825f7531792d7ca86bfe6847cc8d55c341f7701ff491c89c90f7fc646bd4ee0"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m2_edge_live.py",
+        "bytes": 3903,
+        "sha256": "038330ff53ee241ff91060ee38d1f1f77a31bb66f6de153f4028502d302ec4fc"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m2_predicates_live.py",
+        "bytes": 13478,
+        "sha256": "5ee03d789566a87c4622b2373a87883aad944da5106298e0696cf51fb58a64d9"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m36_live.py",
+        "bytes": 7442,
+        "sha256": "3d16d4719b6cc2b61206baa6b9aa845f60fe667fd9b3c07d964e4f3f104d82aa"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m411_live.py",
+        "bytes": 9073,
+        "sha256": "25d3c29ff61b37e182857552324be1291051d18da60418aef386bae735fdd091"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m413_live.py",
+        "bytes": 5541,
+        "sha256": "cd598f879a2e8bf779c7924637d6a9d54ae9859d8aa98d5a2a39419eb39823af"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m42_live.py",
+        "bytes": 7484,
+        "sha256": "ddd67f54c45bc4a750352ae4b58e7fa0f7f502842450a89dd8c92986a6aec993"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m45_live.py",
+        "bytes": 8016,
+        "sha256": "f6c0c7b49585cebac834cb6e37093aa3f27a99cf34a6efccc4a667a945be1392"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m4_compile_live.py",
+        "bytes": 10667,
+        "sha256": "b880989ae331a95d8d3f6b0988ff0080fb03deab5ab487990ac6d94d1b33a5e7"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m5_ab_live.py",
+        "bytes": 10336,
+        "sha256": "9f09734e7f49a3c02223da384348f465f762497e3cb4ac4b00960b4f3cc7007f"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m5_spec_live.py",
+        "bytes": 9433,
+        "sha256": "af6fca07ef26aebb79919ad768d17ade42a4451d0645b2606522a4b914ea1a45"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m6_live.py",
+        "bytes": 11438,
+        "sha256": "1296b8ba183d190fb20cb4970585edda680285a98aee21e98f6263aa71db7c01"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m7_director_live.py",
+        "bytes": 11316,
+        "sha256": "b0cfa21afb1215e2898ff28c424c6de442b2a8075216cce37227010641738e17"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m7v2_live.py",
+        "bytes": 8980,
+        "sha256": "85e049e02c73012f981da0bd227ee748929d873bdcfead40add9adb6ec63cd17"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m92_live.py",
+        "bytes": 6916,
+        "sha256": "f430492c90833b1fa4b6abec1ab99d902f3d337c9fc77a26fe293987c82e4c2b"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/m9_intake_live.py",
+        "bytes": 6049,
+        "sha256": "b6276890f0afbc6ba8855135443fbdc25b0deae26e4f631ade1ef6da3f628265"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/mat_compiler.py",
+        "bytes": 12428,
+        "sha256": "926843d177c51429f1761cdb6785bdd8d9de579eb6fd2b5a4d9b52f48ede0a63"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/op_compiler.py",
+        "bytes": 26008,
+        "sha256": "24550b9272d4e0ed74d458204014828a32ff2af4a8e2f716135b3ba87b5bc0b2"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/plan_schema.py",
+        "bytes": 15866,
+        "sha256": "e5c5e05d533f1c2551e7a595bb5570c43f3f20702f147b54969e0b50a52e9ae5"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/postfx.py",
+        "bytes": 9247,
+        "sha256": "da5014acde3ad1dacf78d16c7f0003c0ef81a55115753ef3dcefedba11aadbe2"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/render_diff.py",
+        "bytes": 13232,
+        "sha256": "dacf9261515accace3509987421dc78a5ee17ab5099daa6a563fb8d3efa1b100"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/render_diff_live.py",
+        "bytes": 8187,
+        "sha256": "cf7788bfdd1e39716b8819ba3b345a5d024b6c55514a87f5db23ad71b46ef8fd"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/test_escape.py",
+        "bytes": 4448,
+        "sha256": "1d6b5f52c0b24c55ce2a331aaa6747e8bd512e0c33dbae767caf1503d31bec4e"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/test_experience.py",
+        "bytes": 14158,
+        "sha256": "d9e804d8dfbd4fdac1c64817da80dffe3d400f2ecc0bed3c7bbb3f18d42fdd6b"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/test_intake.py",
+        "bytes": 5938,
+        "sha256": "9f242b46603fe9db0b54ea06ad10e58d91e7e5485b6d40c4f86bf4cd214b23e6"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/test_upstream_store.py",
+        "bytes": 4412,
+        "sha256": "b949a80d89956915de4a8bf0790e2b2f7176e6d3ce80dee948ce3437de8b2f40"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/ui_panel.py",
+        "bytes": 7006,
+        "sha256": "a7a6342133fb8429554fee1acab7189f67b71438d47a55838a2b293587696424"
+      },
+      {
+        "path": "m8_bridge/gn_deploy/upstream_store.py",
+        "bytes": 7542,
+        "sha256": "79f4bea92eeb24262e698cf6c09bd44208e7864cdf61aad9be4038beb0672503"
+      },
+      {
+        "path": "m8_bridge/brickfly_mcp-2.1.0-gn-py3-none-any.whl",
+        "bytes": 111223,
+        "sha256": "f6fb592cd5c16b7dffd65f961eec53767e576da779f20ac6c39fa1e12cc65ed9"
+      }
+    ]
+  },
+  "layer3_evidence": {
+    "desc": "验收结果：R5 完结批次（2026-09-27 21:30-22:38，Blender 侧代码零变更故有效）+ R6 传输链重跑",
+    "files": [
+      {
+        "path": "console_result.json",
+        "bytes": 944,
+        "sha256": "154ca5776a63d4171b4f63b74f43d7259c786033db8699a8f390bc7d7e212a10"
+      },
+      {
+        "path": "exp1_result.json",
+        "bytes": 186,
+        "sha256": "1bbe5cecd1a802e8166723c00d90775fa131ee8a48ab352bdae9755262319cce"
+      },
+      {
+        "path": "gn_ab_result.json",
+        "bytes": 3975,
+        "sha256": "bafe703270a07237c976dc1c09fe70ab5e102b6acf0d6292c18d7ec8dbf718d1"
+      },
+      {
+        "path": "gn_adapter_live_result.json",
+        "bytes": 3487,
+        "sha256": "18f29fc8486ba6a4491f83ebdd93fe4f338e883a3d94098c7b59f9ac418f3f0f"
+      },
+      {
+        "path": "gn_probe_result.json",
+        "bytes": 21415,
+        "sha256": "cb80fd76102b6595d6b2b356079f2266e312caecf1d6dd31829c814e33c76145"
+      },
+      {
+        "path": "gn_session_live_result.json",
+        "bytes": 4389,
+        "sha256": "43bb567309769831ef6c088468ded1ad66c607d44417d716238a3a16541936ee"
+      },
+      {
+        "path": "m2_predicates_result.json",
+        "bytes": 4246,
+        "sha256": "d81dbed0ca0389cd39238cb9b719cbd9c93d58e0c6efb4d93714bdce58e1500e"
+      },
+      {
+        "path": "m36_result.json",
+        "bytes": 2905,
+        "sha256": "220865a5296f4914a4446364f4dd2b35cd5a6e71f77424e1a03527815c74727c"
+      },
+      {
+        "path": "m411_result.json",
+        "bytes": 2982,
+        "sha256": "819752459bf9d609565baa2fb1d7127d71f64e24436b48514969742a2f30b693"
+      },
+      {
+        "path": "m42_result.json",
+        "bytes": 2981,
+        "sha256": "8c92849bfdd7d034fce4be29db08f93b77ccd6de18452ceff9994a05d285c46b"
+      },
+      {
+        "path": "m45_result.json",
+        "bytes": 2909,
+        "sha256": "435ae515cd59ae67ca8059cd8c1d9d5f8b4206683c7c4914934f0969f9383bb6"
+      },
+      {
+        "path": "m4_compile_live_result.json",
+        "bytes": 2990,
+        "sha256": "3e5d7230381fc2665d972c457366109977e38e7eee3cd78b159d7014e705c682"
+      },
+      {
+        "path": "m5_ab_live_result.json",
+        "bytes": 3190,
+        "sha256": "b7d96dcfcc4c1692d88be5ab7ec2b0503c3dec5a6e8d5a9ec2f95e8b850234f7"
+      },
+      {
+        "path": "m5_spec_result.json",
+        "bytes": 3723,
+        "sha256": "0fa18601d59b8c3670e85e27afcbb998cde611885969e8c1ddb63d5a634265f0"
+      },
+      {
+        "path": "m6_live_result.json",
+        "bytes": 2718,
+        "sha256": "a0e8d6785def226a0d178b252e21687a99454cc6e90c9a6b6fca5025dec908be"
+      },
+      {
+        "path": "m7_director_live_result.json",
+        "bytes": 2499,
+        "sha256": "e9072da6474fa57a8d9cfa159fc7641e59511deafc9c6b44e34715492209c643"
+      },
+      {
+        "path": "m92_result.json",
+        "bytes": 2838,
+        "sha256": "60cfd65c3bf6d44047dbbbd47a1c8de56cb31bba324731e2c364efee86729976"
+      },
+      {
+        "path": "m9_intake_live_result.json",
+        "bytes": 2140,
+        "sha256": "fdd4d3b4fd427ab5607e34f1eb98ac65129670b3b3982534e7a4e8a30dfafd08"
+      },
+      {
+        "path": "probe_m43_result.json",
+        "bytes": 2489,
+        "sha256": "cdf4d3a25271df4832e23a39528e4886d2fc6f8bdf695f02aff58f7b4f5b8b40"
+      },
+      {
+        "path": "probe_m49_result.json",
+        "bytes": 1356,
+        "sha256": "192b935119b8cd9d121385715f6bbc0dacae95b11277f2fd845c3cf6bce9fbaf"
+      },
+      {
+        "path": "probe_m49c_result.json",
+        "bytes": 837,
+        "sha256": "8158caba99392029217d22e608802ec33c4b7c16e53f068b52eb45df695e4858"
+      },
+      {
+        "path": "probe_nodeids_result.json",
+        "bytes": 1187,
+        "sha256": "625b0a45dbc16f522865b470df8a8f0ea392dc8bd8e9e5dec4ecc30e35463ac4"
+      },
+      {
+        "path": "probe_ops_result.json",
+        "bytes": 3539,
+        "sha256": "107d1b751f8bbbc432af83e3700b6984cbb2c529b88b0e4fa1d516d0c47d4bc1"
+      },
+      {
+        "path": "probe_render_result.json",
+        "bytes": 711,
+        "sha256": "64f6e920d94f0d315aee832ab944dd78252aacc17eb8444ecfbaea638886d855"
+      },
+      {
+        "path": "render_diff_live_result.json",
+        "bytes": 1678,
+        "sha256": "503cc2711e7b9b98d8059edce3649e8a676be1b705287aa32d7ea9133fc84889"
+      },
+      {
+        "path": "m8_bridge/e2e_result.json",
+        "bytes": 1413,
+        "sha256": "a68175f17254a18b0bccb3d6b2b18ff21311ef3f1e0693b915262457f23313e3"
+      },
+      {
+        "path": "m8_bridge/mcp_smoke_result.json",
+        "bytes": 2183,
+        "sha256": "f8d5a136b8a5ccb2fe4b3040195f5a5a9f0e10f03b22e40a9a6382ec2aa81153"
+      },
+      {
+        "path": "m8_bridge/sandbox_probe_result.json",
+        "bytes": 3376,
+        "sha256": "8859183c861a9857e476602d98a30b17d8e8d41743931bef0b8fd353d84277f9"
+      }
+    ]
+  },
+  "layer4_docs": {
+    "desc": "工单/交接/规划/审计/交付与发布说明",
+    "files": [
+      {
+        "path": "m8_bridge/M8-R2交付说明.md",
+        "bytes": 3012,
+        "sha256": "58bc492352172d470fda5e75fb29526078d52cb47de4df639700c6a7908c26bc"
+      },
+      {
+        "path": "m8_bridge/M8-R6发布说明_2.1.0-gn.md",
+        "bytes": 5020,
+        "sha256": "11b894217af0edac1c4fda773694b364c979bb79a979dba9e396ae23e4b80427"
+      },
+      {
+        "path": "工单_v2_BlenderAI建模控制台.md",
+        "bytes": 50323,
+        "sha256": "df36c34d457e955125d88a999fa5ed16310e22a1c3a17715c85eeedd8a435120"
+      },
+      {
+        "path": "总工单审计_2026-09-27.md",
+        "bytes": 6195,
+        "sha256": "b83e8d03c26a60144a488680418606d782789af087a18a8644dfc71e00849299"
+      },
+      {
+        "path": "进度规划_2026-09-27.md",
+        "bytes": 7504,
+        "sha256": "7b11cb69a868bfb0ea7b3ca8051c19f7975114fc5e00f48f275456bb9d5a1a94"
+      },
+      {
+        "path": "零损失交接文档.md",
+        "bytes": 58181,
+        "sha256": "a01868d8cd51f5490c6ca970c7ce01fce02ceac7a4f777eb9f8386b5fc67e606"
+      }
+    ]
+  }
+}
