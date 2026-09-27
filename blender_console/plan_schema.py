@@ -131,7 +131,8 @@ class PlanSchema:
         seen_names: set[str] = set()
         allowed_seg_keys = {"id", "order", "op", "parameters", "depends_on",
                            "fallback", "thought_refs", "escape_hatch", "obj",
-                           "consumes_input", "stage", "part"}   # M7-2 工艺阶段+部件路径
+                           "consumes_input", "stage", "part",   # M7-2 工艺阶段+部件路径
+                           "rig_json"}   # M4-12b 段落级 rig 资产（深度校验在编译期 rig_compiler）
 
         for i, sec in enumerate(sections):
             prefix = f"$.sections[{i}]"
