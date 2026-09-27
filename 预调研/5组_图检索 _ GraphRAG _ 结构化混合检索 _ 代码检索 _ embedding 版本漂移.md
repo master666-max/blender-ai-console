@@ -18,16 +18,16 @@
 
 ## 二、已解决的问题（可直接抄）
 
-1. **图骨架用确定性解析，语义标注才用 LLM**（证据即 2601.08773 与 SAP 那篇）。我们比普通代码仓库更占便宜：bpy 调用是显式 op 序列，RNA 反射能拿到参数签名/默认值/单位，拓扑指纹可从几何算——这是运行时真值，不是静态猜测。**架构上 X（LLM 抽关系）改成 Y（AST/RNA 建边，LLM 只写节点属性 intent / semantic_tag / failure_mode）**。
+1. **图骨架用确定性解析，语义标注才用 LLM**（证据即 2601.08773 与 SAP 那篇）。本项目比普通代码仓库更占便宜：bpy 调用是显式 op 序列，RNA 反射能拿到参数签名/默认值/单位，拓扑指纹可从几何算——这是运行时真值，不是静态猜测。**架构上 X（LLM 抽关系）改成 Y（AST/RNA 建边，LLM 只写节点属性 intent / semantic_tag / failure_mode）**。
 2. **代码检索必须双通道**。纯 embedding 会丢结构信息（SYNC, IJCNLP 2023：CodeBERT 类模型检索出错误的数据类型与方法签名）。改为：结构化侧按 `op_name + 参数维度 + 前置拓扑指纹` 精确匹配，向量侧只做语义兜底。
-3. **参数反查的成熟答案在 CAD：特征树 + 命名参数 + 设计表 + 参数分层**（L0 顶层/L1 部件/L2 零件/L3 特征，上层用表达式驱动下层）。翻译成我们的 schema：每个步骤节点存 `params: {radius: 0.05}` 具名数值属性，参数反查退化为"按参数名+值域过滤"，不需要 embedding 里存在"粗细"这个语义维度。
+3. **参数反查的成熟答案在 CAD：特征树 + 命名参数 + 设计表 + 参数分层**（L0 顶层/L1 部件/L2 零件/L3 特征，上层用表达式驱动下层）。翻译成本项目的 schema：每个步骤节点存 `params: {radius: 0.05}` 具名数值属性，参数反查退化为"按参数名+值域过滤"，不需要 embedding 里存在"粗细"这个语义维度。
 4. **增量更新用哈希差分**：对源文件/操作块做 SHA-256，只对变更部分重跑索引（ByteBell 开源方案即如此），避开 GraphRAG 那种"新文档进来→社区重划→摘要失效"的级联。
 5. **embedding 是版本化的 schema，不是函数**：每条向量记 `{model_id, revision, chunking_policy, preprocess_version}`，缓存 key 也带上。换模型走 blue-green：新 collection 并行建 → 双写 → 影子流量 → 灰度切流 → 保留旧索引到回滚窗口结束。
 
 ## 三、已知的坑 / 反直觉发现
 
 1. **图库内置向量索引明显弱于专用向量库**。TigerVector（SIGMOD-Companion 2025）实测 SIFT100M：Neo4j 召回 67.50%/208 QPS，TigerVector 90.94%/1079 QPS（5.19× QPS、+23% recall）。KTH 2025 毕业论文同样得出 FAISS+Neo4j 在准确率/延迟/可扩展性上均优于 Neo4j 内置向量。→ 别指望 Neo4j 顺手把向量做了。
-2. **过滤是向量搜索的阿喀琉斯之踵**。post-filter 在高选择性下会**静默返回少于 top_k 甚至 0 条**；top-10 + 1% 选择性实际等于 top-1000 查询。Weaviate 默认 post-filter（可请求 pre-filter/ACORN）；Qdrant 的 payload-aware HNSW 在 5% 选择性下 QPS 仅掉 20%，Weaviate/Milvus 掉 40–60%。**我们的"参数值域过滤"正好落在 1–20% 选择性这个最痛区间，必须先 oversample（top_k≥100）再过滤。**
+2. **过滤是向量搜索的阿喀琉斯之踵**。post-filter 在高选择性下会**静默返回少于 top_k 甚至 0 条**；top-10 + 1% 选择性实际等于 top-1000 查询。Weaviate 默认 post-filter（可请求 pre-filter/ACORN）；Qdrant 的 payload-aware HNSW 在 5% 选择性下 QPS 仅掉 20%，Weaviate/Milvus 掉 40–60%。**本项目的"参数值域过滤"正好落在 1–20% 选择性这个最痛区间，必须先 oversample（top_k≥100）再过滤。**
 3. **噪声实体在图里被放大，比在向量库里更致命**：向量库里一个坏 chunk 只是多一条无关结果，图里一个错实体会造出假连接并沿遍历污染。HippoRAG 消融还显示换 Llama-3-70B 做 OpenIE 反而因格式错误变差，8B 却与 GPT-3.5-turbo 相当——"更大的模型"在图构建上不成立。
 4. **RAGAS 无参考指标在某些数据集上上下文相关性准确率仅 15–36%**（ARES 论文对比，ARES 稳定在 67–92%）。别把 RAGAS 分数当验收金标准，自建 golden set：50–100 条真实查询，标注"应召回第几步操作"。
 5. **CAD 的经典反模式会原样复现**：直接以模型边线作后续特征参考，倒角顺序一变边线 ID 就变、特征重建失败。Blender 里按 bpy 顶点/面索引选择完全同构——**必须给拓扑元素持久命名（或几何指纹哈希），不能裸存 index。**
@@ -48,7 +48,7 @@
 1. Microsoft GraphRAG（2024）github.com/microsoft/graphrag ；LazyGraphRAG 官方博客（2024.11）
 2. LightRAG — arXiv:2410.05779（EMNLP 2025 Findings），代码 HKUDS/LightRAG
 3. HippoRAG — arXiv:2405.14831（NeurIPS 2024）；HippoRAG 2（ICML 2025）
-4. **Reliable Graph-RAG for Codebases: AST-Derived Graphs vs LLM-Extracted Knowledge Graphs — arXiv:2601.08773（2026.1）** ← 已在 arxiv.org/abs/2601.08773 核实，直接验证我们的核心判断
+4. **Reliable Graph-RAG for Codebases: AST-Derived Graphs vs LLM-Extracted Knowledge Graphs — arXiv:2601.08773（2026.1）** ← 已在 arxiv.org/abs/2601.08773 核实，直接验证本项目的核心判断
 5. Efficient KG Construction and Retrieval from Unstructured Text（SAP, CIKM 2025）— arXiv:2507.03226
 6. TigerVector（SIGMOD-Companion 2025）cs.purdue.edu/homes/csjgwang/pubs/SIGMOD25_TigerVector.pdf ← 图库向量性能硬数据
 7. BGE-M3（BAAI 2024）huggingface.co/BAAI/bge-m3 —— dense/sparse/multi-vector 三头一体，8192 token
@@ -59,7 +59,7 @@
 ---
 给其他组的交叉提示：
 - 第1组（参数化建模/CAD特征树）：本文第三节第5条"边线 ID 反模式"与第二节第3条"参数分层 L0-L3"直接可用，建议他们重点展开。
-- 第2组（撤销/重做/事件溯源）：我们的"操作序列 canonical source 必须保留、不能只存向量"与他们的事件日志设计是同一份数据，建议统一为一份 append-only 日志，向量/图都是它的物化视图。
+- 第2组（撤销/重做/事件溯源）：本项目的"操作序列 canonical source 必须保留、不能只存向量"与他们的事件日志设计是同一份数据，建议统一为一份 append-only 日志，向量/图都是它的物化视图。
 
 
 ---
@@ -70,15 +70,15 @@
 你是跨学科预调研的第 5 组，负责【图检索 / GraphRAG / 结构化混合检索 / 代码检索 / embedding 版本漂移】这条线。
 
 【项目背景 — 必读】
-我们在设计「Blender AI 建模控制台」：LLM 通过 MCP 驱动 Blender 做 3D 建模。需要把每一步建模操作存起来供后续检索复用。
-关键特殊性（这是我们要你重点攻的问题）：
+本项目「Blender AI 建模控制台」：LLM 通过 MCP 驱动 Blender 做 3D 建模。需要把每一步建模操作存起来供后续检索复用。
+关键特殊性（这是本项目要你重点攻的问题）：
 - 数据主体是 **bpy.ops 结构化代码**，不是自然语言文本
 - 需要支持「参数反查」：人说"把手太粗"，向量库里没有"粗细"这个语义维度，需要按参数维度+取值范围检索
 - 需要支持「关系查询」：这个倒角是在哪个基元上做的？哪一步引入了这个破面？改这个尺寸会影响哪些下游步骤？
 - 上下文强依赖：同一个"挤出"在立方体和圆柱上意义完全不同，需要前置拓扑指纹
 - 时序依赖：操作有严格前序关系
 技术栈已有：Weaviate、Neo4j、llama.cpp（本地 bge-m3 / Qwen3-Embedding GGUF）、blender-mcp。
-我们的初步判断是：图的部分应该直接 parse AST / 读 Blender RNA 反射来建（确定性、零 LLM 成本），而不是像 LightRAG 那样让 LLM 从文本抽实体关系。请你验证或反驳这个判断。
+本项目的初步判断是：图的部分应该直接 parse AST / 读 Blender RNA 反射来建（确定性、零 LLM 成本），而不是像 LightRAG 那样让 LLM 从文本抽实体关系。请你验证或反驳这个判断。
 
 【你的调研任务】
 必查方向（用 WebSearch 核实，不要凭记忆编造，优先 2024-2026）：
@@ -94,10 +94,10 @@
 
 【输出格式】中文，1000-1400 字，密集具体：
 1. 里程碑/现状 4-6 条：名称/年份 + 核心机制 + 与本项目关联
-2. 已解决的问题（可直接抄）：3-5 条，每条具体到「我们架构里 X 应该改成 Y」
+2. 已解决的问题（可直接抄）：3-5 条，每条具体到「本项目架构里 X 应该改成 Y」
 3. 已知的坑 / 反直觉发现：3-5 条（必须有实测数据或明确的工程结论）
 4. 对本项目的具体建议：3-5 条。特别回答：
-   (a) 我们的「图从 AST 直接建 vs LLM 抽取」判断对不对？在什么条件下应该反过来？
+   (a) 本项目的「图从 AST 直接建 vs LLM 抽取」判断对不对？在什么条件下应该反过来？
    (b) "参数反查"（人说粗细/大小，库里按参数维度找）业界有没有现成做法可抄？
    (c) Weaviate + Neo4j 双库是否必要，还是单一图库（如 Neo4j 向量索引）就够？给出判断依据
 5. 关键文献/工具/链接 5-8 条（WebSearch 核实过、真实存在）

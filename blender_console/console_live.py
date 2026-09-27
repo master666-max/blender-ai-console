@@ -1,6 +1,7 @@
 """console.py 真机验收——M4-3 compile + M3 回退 + M9-1 tool return + M4-8 struct error"""
 import json, sys, time
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import bpy
@@ -120,5 +121,5 @@ check("export_state", lambda: r7.ok and "steps" in r7.data, True)
 check("export 含 attribution", lambda: len(r7.data.get("attribution", {})), 2)
 
 print(f"\nCONSOLE: {sum(1 for r in ROWS if r['ok'])}/{len(ROWS)} passed")
-out = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender\console_result.json")
+out = ROOT.parent / "2026-09-26-blender" / "console_result.json"
 out.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1), encoding="utf-8")

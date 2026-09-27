@@ -39,6 +39,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]  # 仓库根（相对推导，跨机器可移植）
 from typing import Any, Callable
 
 import bpy
@@ -48,7 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gn_adapter import GNAdapter, GNValidationError, ParamSpec  # noqa: E402
 from gn_verify import GeometryVerifier  # noqa: E402
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender\gn_feasibility.json")
+OUT = ROOT.parent / "2026-09-26-blender" / "gn_feasibility.json"
 LOG: list[str] = []
 DATA: dict[str, Any] = {}
 

@@ -7,10 +7,11 @@ Tier-1 桩所需的全部代码模式，产出通行/拦截矩阵。
 """
 import importlib.util  # noqa: E402
 from pathlib import Path as _P  # noqa: E402
+ROOT = _P(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 _spec = importlib.util.spec_from_file_location(
     "safe_mode",
-    _P(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\brickfly_mcp_src\brickfly_mcp\safe_mode.py"))
+    ROOT / "m8_bridge/brickfly_mcp_src/brickfly_mcp/safe_mode.py")
 safe_mode = importlib.util.module_from_spec(_spec)  # noqa: E402  上游原版校验器（未改一行）
 _spec.loader.exec_module(safe_mode)  # noqa: E402  自足模块（仅 ast/os/typing，见其 §imports）
 
@@ -73,6 +74,6 @@ for f in failed:
 
 # 结论落盘
 import json  # noqa: E402
-out = _P(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\sandbox_probe_result.json")
+out = ROOT / "m8_bridge/sandbox_probe_result.json"
 out.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1), encoding="utf-8")
 print("result ->", out)

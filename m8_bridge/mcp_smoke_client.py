@@ -11,6 +11,7 @@ import json
 import os
 import sys
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
@@ -21,7 +22,7 @@ from mcp.client.stdio import get_default_environment, stdio_client
 _ENV = get_default_environment()
 _ENV["BLENDER_MCP_SAFE_MODE"] = "1"
 
-BRIDGE = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-21-02-58/m8_bridge")
+BRIDGE = ROOT / "m8_bridge"
 PYV = str(BRIDGE / ".venv-mcp" / "Scripts" / "python.exe")
 
 PARAMS = StdioServerParameters(

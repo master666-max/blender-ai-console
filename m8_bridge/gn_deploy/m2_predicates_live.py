@@ -21,6 +21,7 @@
 import json
 import sys
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -30,7 +31,7 @@ import bmesh  # noqa: E402
 
 from gn_verify import GeometryVerifier, check_dfm, _DFM_LIMITS  # noqa: E402
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender")
+OUT = ROOT.parent / "2026-09-26-blender"
 ROWS: list[dict] = []
 
 

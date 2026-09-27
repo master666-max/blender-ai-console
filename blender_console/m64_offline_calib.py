@@ -21,12 +21,13 @@
 import json
 import math
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 import bpy
 import bmesh
 from mathutils import Vector
 
-RESULTS = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-blender")
+RESULTS = ROOT.parent / "2026-09-26-blender"
 RES = 128          # 离线体素分辨率（工单口径）
 HBINS = 64         # EMD 直方图 bins
 checks: list[dict] = []

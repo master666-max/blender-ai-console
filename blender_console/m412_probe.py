@@ -16,10 +16,11 @@ import json
 import sys
 import traceback
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 import bpy
 
-RESULTS = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-blender")
+RESULTS = ROOT.parent / "2026-09-26-blender"
 
 checks: list[dict] = []
 

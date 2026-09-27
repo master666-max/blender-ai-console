@@ -126,4 +126,4 @@ A4 汇报"已写入"但文件根本不存在（其余 10 份都在）。**"声�
 - 评分台：`2026-09-26-blender/exp1_harness.py`（支持 `-- 案例名` 隔离运行）
 - 候选实现：`2026-09-26-blender/exp1_candidates/{A1..A5,B1..B6}.py`（11 份，含各阶段版本）
 - 评分原始数据：`2026-09-26-blender/exp1_result_*.json`
-- 代理记录：`~/.workbuddy/projects/d-WorkBuddy专用！危险！！！！！！！！/b6162827-*/subagents/`
+> （原始数据：多智能体并行调研的子代理轨迹，已汇总为本目录报告）

@@ -14,9 +14,9 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-21-02-58")
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 BRIDGE = ROOT / "m8_bridge"
-RESULTS = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-blender")
+RESULTS = ROOT.parent / "2026-09-26-blender"
 RELEASE = ROOT / "release"
 VERSION = "2.1.0-gn"
 

@@ -1,9 +1,10 @@
 """m45_probe3.py — SDF 管线语义探针：operation 枚举 + Threshold 等值面 + 端到端差集。"""
 import json
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 import bpy
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender")
+OUT = ROOT.parent / "2026-09-26-blender"
 rep = {}
 ng = bpy.data.node_groups.new("_probe3", "GeometryNodeTree")
 

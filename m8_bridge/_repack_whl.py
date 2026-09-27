@@ -8,8 +8,9 @@ import asyncio
 import shutil
 import zipfile
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
-BRIDGE = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-21-02-58/m8_bridge")
+BRIDGE = ROOT / "m8_bridge"
 SRC_PKG = BRIDGE / "brickfly_mcp_src" / "brickfly_mcp"
 OUT_WHL = BRIDGE / "brickfly_mcp-2.1.0-gn-py3-none-any.whl"
 SP = BRIDGE / ".venv-mcp" / "Lib" / "site-packages"

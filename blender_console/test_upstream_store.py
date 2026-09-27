@@ -6,6 +6,7 @@
 """
 import sys
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -13,7 +14,7 @@ sys.path.insert(0, str(HERE))
 from experience import ExperienceStore
 from upstream_store import UpstreamExperienceStore
 
-ISO = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\上游隔离区\经验库条目")
+ISO = ROOT / "上游隔离区" / "经验库条目"
 
 ROWS: list[dict] = []
 

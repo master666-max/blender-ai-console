@@ -5,10 +5,11 @@ A30 裁决引用"Blender GN 已原生内置 sdf_grid_boolean"——该调研早�
 """
 import json
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 import bpy
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender")
+OUT = ROOT.parent / "2026-09-26-blender"
 
 all_geo = sorted(n for n in dir(bpy.types) if n.startswith("GeometryNode"))
 sdf_like = [n for n in all_geo if "sdf" in n.lower()]

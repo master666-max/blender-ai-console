@@ -10,6 +10,7 @@ import json
 import sys
 import time
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -274,6 +275,6 @@ if failed:
     for f in failed:
         print("  FAILED:", f["case"], "->", f["detail"])
 
-out = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender\gn_adapter_live_result.json")
+out = ROOT.parent / "2026-09-26-blender" / "gn_adapter_live_result.json"
 out.write_text(json.dumps(RESULTS, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
 print("result ->", out)

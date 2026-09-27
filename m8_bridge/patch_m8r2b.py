@@ -7,8 +7,8 @@ import py_compile
 import shutil
 import zipfile
 
-SRC = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\brickfly_mcp_src\brickfly_mcp")
-OUT_WHL = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\brickfly_mcp-2.0.1-gn-py3-none-any.whl")
+SRC = ROOT / "m8_bridge" / "brickfly_mcp_src" / "brickfly_mcp"
+OUT_WHL = ROOT / "m8_bridge" / "brickfly_mcp-2.0.1-gn-py3-none-any.whl"
 
 TOOLS = [
     ("gn_compile", "gn_compile", "提交一个段落提案（plan-JSON spec dict，走导演 propose）"),

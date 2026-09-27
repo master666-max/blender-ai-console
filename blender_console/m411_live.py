@@ -22,6 +22,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -33,7 +34,7 @@ from console import Console
 from op_compiler import spec_field_whitelist
 from mat_compiler import compile_material, material_fingerprint
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender")
+OUT = ROOT.parent / "2026-09-26-blender"
 ROWS: list[dict] = []
 
 

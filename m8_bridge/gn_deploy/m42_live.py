@@ -22,6 +22,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -32,7 +33,7 @@ from gn_adapter import GNAdapter
 from console import Console
 from gn_artifact import GNArtifact
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender")
+OUT = ROOT.parent / "2026-09-26-blender"
 ROWS: list[dict] = []
 
 

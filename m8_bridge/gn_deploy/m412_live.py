@@ -28,6 +28,7 @@ import math
 import sys
 import traceback
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]  # 仓库根（相对推导，跨机器可移植）
 
 import bpy
 import bmesh
@@ -39,7 +40,7 @@ sys.path.insert(0, str(HERE))
 import rig_compiler
 from rig_compiler import RigConstraintError, normalize_rig_plan, compile_rig, rig_fingerprint
 
-RESULTS = Path(r"D:/WorkBuddy专用！危险！！！！！！！！/2026-09-26-blender")
+RESULTS = ROOT.parent / "2026-09-26-blender"
 RES = 128
 checks: list[dict] = []
 

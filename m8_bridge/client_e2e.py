@@ -11,6 +11,7 @@ import sys
 import time
 import types
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "brickfly_mcp_src"))
@@ -159,7 +160,7 @@ failed = [r for r in ROWS if not r["ok"]]
 print(f"\nM8-R2 E2E: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
 for f in failed:
     print("  FAILED:", f["case"], "->", f.get("detail"))
-out = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\e2e_result.json")
+out = ROOT / "m8_bridge" / "e2e_result.json"
 out.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1), encoding="utf-8")
 print("result ->", out)
 sys.exit(1 if failed else 0)

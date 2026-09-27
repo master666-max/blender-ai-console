@@ -26,6 +26,7 @@ import json
 import sys
 import time
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]  # 仓库根（相对推导，跨机器可移植）
 from typing import Any, Callable
 
 import bpy
@@ -37,7 +38,7 @@ from gn_adapter import GNAdapter, ParamSpec  # noqa: E402
 from gn_console import GNConsole, SPECS  # noqa: E402
 from gn_verify import GeometryVerifier  # noqa: E402
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-blender\gn_ab_result.json")
+OUT = ROOT.parent / "2026-09-26-blender" / "gn_ab_result.json"
 ROWS: list[dict[str, Any]] = []
 
 

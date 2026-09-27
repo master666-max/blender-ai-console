@@ -14,6 +14,7 @@
 import json
 import sys
 from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]  # 仓库根（相对推导，跨机器可移植）
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -23,7 +24,7 @@ import bpy  # noqa: E402
 from director import (AutoPilotPolicy, DirectorSession, NormalPolicy,  # noqa: E402
                       StrictPolicy)
 
-OUT = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge")
+OUT = ROOT / "m8_bridge"
 ROWS: list[dict] = []
 
 
@@ -162,7 +163,7 @@ failed = [r for r in ROWS if not r["ok"]]
 print(f"\nM7-V2 LIVE: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
 for f in failed:
     print("  FAILED:", f["case"], "->", f.get("detail"))
-out = Path(r"D:\WorkBuddy专用！危险！！！！！！！！\2026-09-26-21-02-58\m8_bridge\m7v2_result.json")
+out = ROOT / "m8_bridge" / "m7v2_result.json"
 out.write_text(json.dumps(ROWS, ensure_ascii=False, indent=1), encoding="utf-8")
 print("result ->", out)
 sys.exit(1 if failed else 0)
