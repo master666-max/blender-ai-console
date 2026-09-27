@@ -240,9 +240,12 @@ class GeometryVerifier:
 # ══════════════════════════════════════════════════════════════
 _DFM_LIMITS = {
     "fdm": {"wall_min_mm": 1.2, "overhang_deg": 45, "bridge_max_mm": 10},
-    "sla": {"wall_min_mm": 0.5, "overhang_deg": 30, "bridge_max_mm": 5},
-    "sls": {"wall_min_mm": 0.7, "overhang_deg": 999, "bridge_max_mm": 30},
-    "injection": {"wall_min_mm": 0.8, "draft_deg": 1.0},
+    "sla": {"wall_min_mm": 0.5, "overhang_deg": 30, "bridge_max_mm": 5,
+            "escape_hole": True},
+    "sls": {"wall_min_mm": 0.7, "overhang_deg": 999, "bridge_max_mm": 30,
+            "escape_hole": True},
+    "injection": {"wall_min_mm": 0.8, "draft_deg": 1.0,
+                  "inner_fillet_deg": 45.0, "wall_ratio_max": 2.0},
     "cnc": {"wall_min_mm": 0.8},
 }
 
@@ -260,8 +263,22 @@ def check_dfm(mesh, process="fdm", material_token=None, obj=None):
          自己这张面（距离 ≈1e-5，恰好落进 1e-7 < d < wall_min 判薄区间），
          任何封闭网格都会被判"壁厚过薄"。改为**内偏**起点向内打，
          首命中即对侧壁（真厚度）。零厚度面片漏检由 dfm_manifold 兜底。
-    已知缺口（诚实登记，不虚标）：injection 的 draft_deg 在 _DFM_LIMITS
-    声明但无谓词消费——拔模角检查未实现，M2-8/后续回合再做。
+    M2-6 缺口补全（2026-09-28 R7g，四谓词）：
+      DFM-5 dfm_draft（injection）：零拔模竖直壁——壁面拔模角 θ 的法线
+        z 分量 = sin(θ)，θ < draft_deg ⟺ |nz| < sin(draft_deg)；
+        物理：注塑侧壁无拔模刮伤脱模（d3-dfm）。
+      DFM-6 dfm_inner_fillet（injection）：凹内角边——凹边且两面法线夹角
+        > inner_fillet_deg（45° ⟺ 材料内角 > 225°，典型凹直角 270° 必中）；
+        物理：注塑凹角无圆角 → 应力集中 + 填充不满（典型 R ≥ 0.5-1mm）。
+      DFM-7 dfm_wall_uniformity（injection）：壁厚均匀性——DFM-1 射线
+        样本的 p95/p05 比 ≤ wall_ratio_max（2:1 均厚规则；样本 < 6 跳过）；
+        物理：壁厚悬殊 → 缩水痕/翘曲。
+      DFM-8 dfm_escape_hole（sla/sls）：封闭内腔——连通分量洪泛 + 封闭
+        分量 Euler genus（g=(2-χ)/2, χ=V-E+F）+ bbox 嵌套：内分量封闭
+        且 g==0 → 全封闭腔无逃逸孔（树脂困死/粉末排不出）。
+    仍维持诚实缺口（mesh 层无特征语义，不虚标）：CNC 深径比（需孔特征
+    识别）；独立 min_feature（与 wall_min 面级同源，细分网格假阳性不可控
+    ——由 dfm_min_wall + dfm_inner_fillet 联合近似）。
     """
     import bmesh
     import math
@@ -283,14 +300,20 @@ def check_dfm(mesh, process="fdm", material_token=None, obj=None):
         bvh = BVHTree.FromBMesh(bm)
 
         # DFM-1 最小壁厚（内偏起点 + BVH 射线：首命中 = 对侧壁）
+        # R7g：同一循环沉淀厚度样本 → DFM-7 均匀性复用（一次射线两用）
         wall_min = limits.get("wall_min_mm", 1.2) / 1000
         thin = 0
+        thick_samples: list[float] = []
         for f in bm.faces:
             c = f.calc_center_median()
             n = f.normal.normalized()
             h = bvh.ray_cast(c - n * 1e-5, -n)[0]
             if h is not None and 1e-7 < (c - h).length < wall_min:
                 thin += 1
+            if h is not None:
+                d = (c - h).length
+                if d > 1e-7:
+                    thick_samples.append(d)
         findings.append(Finding("dfm_min_wall", thin == 0, thin, 0,
             f"壁厚 < {wall_min*1000:.1f}mm"))
 
@@ -313,6 +336,92 @@ def check_dfm(mesh, process="fdm", material_token=None, obj=None):
         # DFM-4 非流形
         nm = sum(1 for e in bm.edges if not e.is_manifold)
         findings.append(Finding("dfm_manifold", nm == 0, nm, 0, "非流形边数"))
+
+        # DFM-5 拔模角（injection）：零拔模竖直壁面计数
+        # 几何：壁面拔模角 θ（相对脱模轴 Z）⟺ |nz| = sin(θ)；
+        # θ < draft_deg ⟺ |nz| < sin(draft_deg)。水平顶底面 |nz|≈1 不计入。
+        if "draft_deg" in limits:
+            sin_lim = math.sin(math.radians(limits["draft_deg"]))
+            n_draft = sum(1 for f in bm.faces
+                          if abs(f.normal.z) < sin_lim
+                          and f.calc_area() > 1e-10)
+            findings.append(Finding("dfm_draft", n_draft == 0, n_draft, 0,
+                f"零拔模竖直壁面数（拔模 < {limits['draft_deg']}°）"))
+
+        # DFM-6 凹内角（injection）：凹边且两面法线夹角 > inner_fillet_deg
+        # 凹凸符号（loop 一致绕向，m2_predicates_live L 形真机校准）：
+        # cross(n1, n2)·t < 0 = 凹（t 为 loop1 的边方向）
+        if "inner_fillet_deg" in limits:
+            cos_lim = math.cos(math.radians(limits["inner_fillet_deg"]))
+            n_sharp = 0
+            for e in bm.edges:
+                if len(e.link_faces) != 2 or not e.is_manifold:
+                    continue
+                l1, l2 = e.link_loops
+                n1, n2 = l1.face.normal, l2.face.normal
+                # BMLoop 无 .next——面内沿边方向 = link_loop_next.vert - vert（5.2 实锤）
+                t = (l1.link_loop_next.vert.co - l1.vert.co)
+                if t.length < 1e-12:
+                    continue
+                concave = (n1.cross(n2).dot(t.normalized()) < 0)
+                sharp = n1.dot(n2) < cos_lim  # 法线夹角 > 阈值
+                if concave and sharp and e.calc_length() > 1e-6:
+                    n_sharp += 1
+            findings.append(Finding("dfm_inner_fillet", n_sharp == 0, n_sharp, 0,
+                f"凹内角边数（法线夹角 > {limits['inner_fillet_deg']:.0f}°）"))
+
+        # DFM-7 壁厚均匀性（injection）：DFM-1 厚度样本 p95/p05 ≤ ratio 上限
+        if "wall_ratio_max" in limits and len(thick_samples) >= 6:
+            ts = sorted(thick_samples)
+            p05 = ts[int(0.05 * len(ts))]
+            p95 = ts[min(int(0.95 * len(ts)), len(ts) - 1)]
+            ratio = p95 / max(p05, 1e-9)
+            findings.append(Finding("dfm_wall_uniformity",
+                ratio <= limits["wall_ratio_max"], round(ratio, 3),
+                limits["wall_ratio_max"],
+                f"壁厚 p95/p05 比（均厚规则 ≤ {limits['wall_ratio_max']}:1）"))
+
+        # DFM-8 封闭内腔（sla/sls）：分量洪泛 + 封闭分量 genus + bbox 嵌套
+        if limits.get("escape_hole"):
+            seen: set = set()
+            comps: list[list] = []
+            for f0 in bm.faces:
+                if f0 in seen:
+                    continue
+                stack, comp = [f0], []
+                seen.add(f0)
+                while stack:
+                    f = stack.pop()
+                    comp.append(f)
+                    for e in f.edges:
+                        for nf in e.link_faces:
+                            if nf not in seen:
+                                seen.add(nf)
+                                stack.append(nf)
+                comps.append(comp)
+            info: list[tuple] = []  # (min, max, closed, genus)
+            for comp in comps:
+                edges = {e for f in comp for e in f.edges}
+                verts = {v for f in comp for v in f.verts}
+                closed = all(len(e.link_faces) == 2 for e in edges)
+                chi = len(verts) - len(edges) + len(comp)
+                genus = (2 - chi) / 2 if closed else None
+                bmin = [min(v.co[i] for v in verts) for i in range(3)]
+                bmax = [max(v.co[i] for v in verts) for i in range(3)]
+                info.append((bmin, bmax, closed, genus))
+            trapped = 0
+            for i, (bmin_i, bmax_i, closed_i, g_i) in enumerate(info):
+                if not closed_i or g_i != 0:
+                    continue
+                for j, (bmin_j, bmax_j, _, _) in enumerate(info):
+                    if i == j:
+                        continue
+                    if all(bmin_j[k] > bmin_i[k] and bmax_j[k] < bmax_i[k]
+                           for k in range(3)):
+                        trapped += 1  # j 封闭 genus0 且嵌套于 i → 全封闭腔
+                        break
+            findings.append(Finding("dfm_escape_hole", trapped == 0, trapped, 0,
+                "全封闭内腔数（无逃逸孔；嵌套封闭 genus-0 分量）"))
     finally:
         bm.free()
 

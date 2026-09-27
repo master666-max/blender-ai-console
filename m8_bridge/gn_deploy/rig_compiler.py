@@ -41,9 +41,12 @@ rig_json schema v1（最小闭环；sample 模板路径留 v2）：
 
 幂等语义（与 mat_compiler 同纪律、重建变体）：
   * plan 指纹派生稳定名；同名同指纹 → 复用现产物（rig 对象在场即跳过）
-  * 指纹变更 → 删旧 metarig + RIG-* + WGT-* 后重建（rig 结构变更不重放——
-    骨骼拓扑无"参数重放"语义，EXP-006 免疫同源：引用重建非槽位保留）
-  * v1 诚实边界：假设场景单 rig（WGT- 清理按前缀全局）——多 rig 共存留 v2
+  * 指纹变更 → wipe 重建（rig 结构变更不重放——骨骼拓扑无"参数重放"语义，
+    EXP-006 免疫同源：引用重建非槽位保留）
+  * v2 多 rig 共存（R7g）：wipe 按**归属隔离**——metarig/RIG-<name> 精确名
+    + widget 产物名单（生成后 diff 场景快照沉淀进 metarig 自定义属性
+    rig_widgets；不依赖 Rigify 命名规则）；无名单的孤儿 WGT 不清理
+    （不碰他者纪律）。v1 的全局前缀扫描会误删共存的其他 rig 产物。
 """
 
 from __future__ import annotations
@@ -305,15 +308,43 @@ def _enable_rigify(bpy) -> None:
         raise RigConstraintError("rigify addon 启用失败", code="RIGIFY_NOT_ENABLED")
 
 
-def _wipe(bpy, metarig_name: str) -> None:
-    """删除旧 metarig + RIG-* + WGT-*（v1 单 rig 假设——见模块头诚实边界）。"""
+def _read_widget_record(meta: Any) -> dict:
+    """读 metarig 的 rig_widgets 属性（JSON；坏值一律当空名单——wipe 不因脏属性升级）。"""
+    raw = meta.get("rig_widgets")
+    if not isinstance(raw, str):
+        return {"objects": [], "collections": []}
+    try:
+        rec = json.loads(raw)
+    except ValueError:
+        return {"objects": [], "collections": []}
+    if not isinstance(rec, dict):
+        return {"objects": [], "collections": []}
+    return {"objects": [n for n in rec.get("objects", []) if isinstance(n, str)],
+            "collections": [n for n in rec.get("collections", []) if isinstance(n, str)]}
+
+
+def _wipe(bpy, name: str) -> None:
+    """wipe 本 rig 产物（v2 归属隔离——多 rig 共存）。
+
+    清理面（只清自己）：
+      * metarig `name`（精确名）
+      * 生成产物 `RIG-<name>`（精确名）
+      * 名单 widget：旧 metarig rig_widgets 属性沉淀的对象/集合名
+        （Blender 重名自动 .001 后缀，名单名按前缀匹配兜底）
+    不清理：其他 rig 的 RIG-*/WGT*（v1 全局前缀扫描的误删雷已拆除）；
+    无归属记录的孤儿 WGT（名单缺失时诚实放过——不碰他者）。
+    """
+    meta = bpy.data.objects.get(name)
+    rec = _read_widget_record(meta) if meta is not None else {"objects": [], "collections": []}
+    keep = {name, f"RIG-{name}"} | set(rec["objects"])
     for obj in list(bpy.data.objects):
-        if obj.name == metarig_name or obj.name.startswith("RIG-") \
-                or obj.name.startswith("WGT-"):
+        if obj.name in keep:
             bpy.data.objects.remove(obj, do_unlink=True)
     for coll in list(bpy.data.collections):
-        if coll.name.startswith("WGTS_"):
-            bpy.data.collections.remove(coll)
+        for cn in rec["collections"]:
+            if coll.name == cn or coll.name.startswith(cn + "."):
+                bpy.data.collections.remove(coll)
+                break
 
 
 def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
@@ -338,7 +369,8 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
                 "fingerprint": fp,
                 "n_bones": len(old.data.bones),
                 "rig_bones": [pb.name for pb in
-                              bpy.data.objects[rig_name].pose.bones]}
+                              bpy.data.objects[rig_name].pose.bones],
+                "widgets": _read_widget_record(old)}
 
     _wipe(bpy, name)
 
@@ -407,6 +439,10 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
                 "" if b["name"] == norm["bones"][0]["name"] and not b["parent"] else basic_type)
 
     # 生成（入口实锤：pose.rigify_generate；getattr 链 [2:] 跳 bpy+ops）
+    # v2：生成前拍场景快照，生成后 diff 沉淀本 rig widget 产物名单——
+    # wipe 的归属隔离依据（不依赖 Rigify 命名规则）
+    pre_objs = {o.name for o in bpy.data.objects}
+    pre_colls = {c.name for c in bpy.data.collections}
     bpy.context.view_layer.objects.active = obj
     try:
         r = bpy.ops.pose.rigify_generate()
@@ -421,6 +457,17 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
         raise RigConstraintError(
             f"生成完成但 {rig_name!r} 不在场（Rigify 产物命名漂移？）",
             code="RIG_GENERATE_NO_PRODUCT")
+
+    # v2 多 rig：生成后 diff 场景快照 → 本 rig widget 产物名单（WGT 对象 +
+    # WGTS_ 集合；Rigify 骨骼产物 RIG-<name> 派生名稳定、metarig 名精确，
+    # 均不需要名单）。名单沉淀进 metarig 属性，下次 wipe 按归属精确清理。
+    widgets = {"objects": sorted(o.name for o in bpy.data.objects
+                                 if o.name not in pre_objs
+                                 and o.name.startswith("WGT")),
+               "collections": sorted(c.name for c in bpy.data.collections
+                                     if c.name not in pre_colls
+                                     and c.name.startswith("WGTS"))}
+    obj["rig_widgets"] = json.dumps(widgets)
 
     # 0.6.x raw_copy 实锤（m412_live 首跑）：生成的 rig 保留 metarig 骨骼名
     # 但 use_deform 全 False（DEF-* deform 骨骼仅由复杂 rig 类型生成）——
@@ -486,4 +533,5 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
             "deform_bones": [b.name for b in rig_obj.data.bones if b.use_deform],
             "collections": [c.name for c in arm.collections],
             "basic_type_used": basic_type,
-            "expressions": expr_detail}
+            "expressions": expr_detail,
+            "widgets": widgets}

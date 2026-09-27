@@ -17,6 +17,9 @@
      injection / cnc 组各 1 组正反例。
      已知缺口（诚实登记）：injection 的 draft_deg 在 _DFM_LIMITS 声明但
      无谓词消费——拔模角检查未实现（工单 M2-8/后续回合）。
+  8. M2-6 R7g 缺口补全四谓词（draft / inner_fillet / wall_uniformity /
+     escape_hole 正反例；凹凸符号 L 形真机校准；CNC 深径比与独立
+     min_feature 维持诚实缺口——mesh 层无特征语义）。
 """
 import json
 import sys
@@ -172,9 +175,12 @@ for stage, lim in _EXPECT_BUDGET.items():
 print("\n[7] M2-6 DFM 谓词对账（fdm / injection / cnc 各组）")
 _EXPECT_DFM = {
     "fdm": {"wall_min_mm": 1.2, "overhang_deg": 45, "bridge_max_mm": 10},
-    "sla": {"wall_min_mm": 0.5, "overhang_deg": 30, "bridge_max_mm": 5},
-    "sls": {"wall_min_mm": 0.7, "overhang_deg": 999, "bridge_max_mm": 30},
-    "injection": {"wall_min_mm": 0.8, "draft_deg": 1.0},
+    "sla": {"wall_min_mm": 0.5, "overhang_deg": 30, "bridge_max_mm": 5,
+            "escape_hole": True},
+    "sls": {"wall_min_mm": 0.7, "overhang_deg": 999, "bridge_max_mm": 30,
+            "escape_hole": True},
+    "injection": {"wall_min_mm": 0.8, "draft_deg": 1.0,
+                  "inner_fillet_deg": 45.0, "wall_ratio_max": 2.0},
     "cnc": {"wall_min_mm": 0.8},
 }
 check("_DFM_LIMITS 表逐值一致",
@@ -256,6 +262,89 @@ fs = dfm_ok(thin05, "cnc")
 check("cnc 反例：0.5mm 薄壁 → min_wall 拦", lambda: finding(fs, "dfm_min_wall").ok, False)
 check("cnc 无 overhang 谓词（工艺相关谓词裁剪）",
       lambda: any(f.predicate == "dfm_overhang" for f in fs), False)
+
+# ── [8] M2-6 R7g 补全谓词（draft / inner_fillet / wall_uniformity / escape_hole）──
+print("\n[8] M2-6 R7g 补全：draft / inner_fillet / wall_uniformity / escape_hole")
+
+# DFM-5 draft：圆柱侧壁零拔模（nz=0 < sin1°）拦 / 6° 锥台（nz=sin6°≈0.105）过
+fs = dfm_ok(cyl, "injection")   # 直立圆柱（[7] 反例② 同款，r=0.04）
+check("injection 反例：圆柱零拔模竖直壁 → dfm_draft 拦",
+      lambda: finding(fs, "dfm_draft").ok, False)
+check("injection 反例对照：圆柱 min_wall 仍过（归因干净）",
+      lambda: finding(fs, "dfm_min_wall").ok, True)
+bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=0.04, radius2=0.03,
+                                depth=0.095, location=(-1.0, 0, 0))
+frustum = bpy.context.active_object
+fs = dfm_ok(frustum, "injection")
+check("injection 正例：6° 拔模锥台 → dfm_draft 过",
+      lambda: finding(fs, "dfm_draft").ok, True)
+
+# DFM-6 inner_fillet：L 形（union 结合处凹直角，材料内角 270°）拦
+# 构造实锤：lug 必须侵入大盒（体积重叠）——面贴面接触时 BOOLEAN EXACT
+# 不融合（探针实测 12 面 24 边两盒并列，无凹边产生）
+bpy.ops.mesh.primitive_cube_add(size=0.06, location=(2.0, 0, 0))
+Lshape = bpy.context.active_object
+Lshape.name = "L_Shape"
+bpy.ops.mesh.primitive_cube_add(size=0.03, location=(2.04, 0, -0.015))
+lug = bpy.context.active_object
+mod = Lshape.modifiers.new("U", 'BOOLEAN')
+mod.object = lug
+mod.operation = 'UNION'
+mod.solver = 'EXACT'
+fs = dfm_ok(Lshape, "injection")
+check("injection 反例：L 形凹直角 → dfm_inner_fillet 拦",
+      lambda: finding(fs, "dfm_inner_fillet").ok, False)
+check("injection 反例对照：L 形 min_wall 仍过（归因干净）",
+      lambda: finding(fs, "dfm_min_wall").ok, True)
+check("injection 正例对照：八面体（全凸边）inner_fillet 过",
+      lambda: finding(dfm_ok(octa, "injection"), "dfm_inner_fillet").ok, True)
+
+# DFM-7 wall_uniformity：大盒 + 2mm 薄翼 union → p95/p05 > 2 拦
+# （薄翼 2mm > wall_min 0.8mm → min_wall 过，归因干净）
+bpy.ops.mesh.primitive_cube_add(size=0.06, location=(3.0, 0, 0))
+dumb = bpy.context.active_object
+dumb.name = "Dumbbell"
+bmw = bmesh.new()
+bmesh.ops.create_cube(bmw, size=0.002)          # 真尺寸 2mm 薄翼
+mewing = bpy.data.meshes.new("Wing")
+bmw.to_mesh(mewing)
+bmw.free()
+wing = bpy.data.objects.new("Wing", mewing)
+bpy.context.collection.objects.link(wing)
+wing.location = (3.031, 0, 0)                   # 贴大盒右面外伸
+mod = dumb.modifiers.new("U", 'BOOLEAN')
+mod.object = wing
+mod.operation = 'UNION'
+mod.solver = 'EXACT'
+fs = dfm_ok(dumb, "injection")
+check("injection 反例：60mm 盒 + 2mm 翼 → dfm_wall_uniformity 拦",
+      lambda: finding(fs, "dfm_wall_uniformity").ok, False)
+check("injection 反例对照：哑铃 min_wall 仍过（翼 2mm > 0.8mm）",
+      lambda: finding(fs, "dfm_min_wall").ok, True)
+check("injection 正例对照：八面体（等厚 ratio=1）uniformity 过",
+      lambda: finding(dfm_ok(octa, "injection"), "dfm_wall_uniformity").ok, True)
+
+# DFM-8 escape_hole（sla）：嵌套封闭球腔拦 / 单球过
+bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12,
+                                     radius=0.03, location=(4.0, 0, 0))
+hollow = bpy.context.active_object
+hollow.name = "Hollow_Sphere"
+bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8,
+                                     radius=0.01, location=(4.0, 0, 0))
+inner_s = bpy.context.active_object
+for o in bpy.data.objects:
+    o.select_set(o in (hollow, inner_s))
+bpy.context.view_layer.objects.active = hollow
+bpy.ops.object.join()                            # 两分量同一 mesh
+fs = dfm_ok(hollow, "sla")
+check("sla 反例：嵌套封闭内球（genus0 无逃逸）→ dfm_escape_hole 拦",
+      lambda: finding(fs, "dfm_escape_hole").ok, False)
+bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12,
+                                     radius=0.03, location=(4.5, 0, 0))
+solid_s = bpy.context.active_object
+fs = dfm_ok(solid_s, "sla")
+check("sla 正例：单球（无嵌套）→ dfm_escape_hole 过",
+      lambda: finding(fs, "dfm_escape_hole").ok, True)
 
 failed = [r for r in ROWS if not r["ok"]]
 print(f"\nM2-PREDICATES LIVE: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
