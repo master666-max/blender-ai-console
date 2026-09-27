@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Blender](https://img.shields.io/badge/Blender-5.2-orange)](https://www.blender.org/)
 [![Runtime](https://img.shields.io/badge/runtime-bpy-blue)](https://docs.blender.org/api/current/)
-[![Tests](https://img.shields.io/badge/tests-33_suites_%7E719_assertions-brightgreen)](#验收状态)
+[![Tests](https://img.shields.io/badge/tests-34_suites_%7E724_assertions-brightgreen)](#验收状态)
 
 [这是什么](#这是什么) · [核心特性](#核心特性) · [快速开始](#快速开始) · [架构](#架构) · [验收状态](#验收状态) · [路线图](#路线图)
 
@@ -21,7 +21,7 @@
 
 主流「AI + Blender」方案让 LLM 直接写并执行 bpy 脚本——能跑，但无法重放、无法审计、无法撤销。这里换成另一条路：**LLM 只声明 plan-JSON，确定性编译器落地，机械 verifier 把守每一步**。
 
-对话中的每个段落都是一个可重放、可回退、可审计的单元；每一次提交都有同机位渲染 diff 与 33 套真机验收套件（≈719 断言）背书。
+对话中的每个段落都是一个可重放、可回退、可审计的单元；每一次提交都有同机位渲染 diff 与 34 套真机验收套件（≈724 断言）背书。
 
 ## 核心特性
 
@@ -81,14 +81,14 @@ flowchart LR
 
 | 路径 | 内容 |
 |---|---|
-| [`blender_console/`](blender_console/) | 控制台主体 + 33 套 `_live.py` 真机验收 |
+| [`blender_console/`](blender_console/) | 控制台主体 + 34 套 `_live.py` 真机验收 |
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | 部署载荷（55 py，与主线 diff 校验一致） |
 | [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
 | [`release/`](release/) | 发布 manifest（147 文件五层清单） |
 
 ## 验收状态
 
-M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**33 套 ≈ 719 断言**。
+M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**34 套 ≈ 724 断言**。
 
 <details>
 <summary><b>套件亮点（点击展开）</b></summary>
