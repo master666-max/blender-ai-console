@@ -34,3 +34,12 @@ m8_bridge/*_result.json
 m8_bridge/*.whl
 blender_server_log.txt
 *_wal*/
+
+# 项目工作文档与档案（台账/调研/上游分析——本地保留，不入仓库；仓库只留代码+README+LICENSE）
+/*.md
+!/README.md
+!/README.zh-CN.md
+/深度调研/
+/算法路线调研/
+/预调研/
+/上游隔离区/

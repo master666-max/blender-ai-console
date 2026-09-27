@@ -74,10 +74,8 @@ def main() -> None:
     l3 += collect([BRIDGE / "e2e_result.json", BRIDGE / "mcp_smoke_result.json",
                    BRIDGE / "sandbox_probe_result.json"], ROOT)
 
-    # ── L4 文档 ──
-    l4 = collect([ROOT / "工单_v2_BlenderAI建模控制台.md", ROOT / "零损失交接文档.md",
-                  ROOT / "进度规划_2026-09-27.md", ROOT / "总工单审计_2026-09-27.md",
-                  BRIDGE / "M8-R2交付说明.md", ROOT / "m8_bridge" / "M8-R6发布说明_2.1.0-gn.md"], ROOT)
+    # ── L4 文档 ──（工作台账已移出仓库，仅收录 bridge 内交付说明）
+    l4 = collect([BRIDGE / "M8-R2交付说明.md", ROOT / "m8_bridge" / "M8-R6发布说明_2.1.0-gn.md"], ROOT)
 
     manifest = {
         "release": VERSION,
