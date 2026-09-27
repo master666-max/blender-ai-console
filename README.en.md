@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Blender](https://img.shields.io/badge/Blender-5.2-orange)](https://www.blender.org/)
 [![Runtime](https://img.shields.io/badge/runtime-bpy-blue)](https://docs.blender.org/api/current/)
-[![Tests](https://img.shields.io/badge/tests-29_suites_%7E688_assertions-brightgreen)](#verification-status)
+[![Tests](https://img.shields.io/badge/tests-30_suites_%7E696_assertions-brightgreen)](#verification-status)
 
 [What is this](#what-is-this) · [Key features](#key-features) · [Quick start](#quick-start) · [Architecture](#architecture) · [Verification](#verification-status) · [Roadmap](#roadmap)
 
@@ -21,7 +21,7 @@ An AI modeling console that runs inside Blender 5.2.
 
 Most "AI + Blender" integrations let the LLM write and execute bpy scripts. It works — until you need to replay, audit, or undo. This project takes a different path: **the LLM only declares plan-JSON, deterministic compilers land it, and a mechanical verifier guards every step**.
 
-Every conversational paragraph is a replayable, rollbackable, auditable unit; every commit is backed by same-camera render diffs and 29 live acceptance suites (≈688 assertions).
+Every conversational paragraph is a replayable, rollbackable, auditable unit; every commit is backed by same-camera render diffs and 30 live acceptance suites (≈696 assertions).
 
 ## Key features
 
@@ -81,14 +81,14 @@ Ten modules, each with its own acceptance suite: **M1** data layer (FlowDAG / WA
 
 | Path | Content |
 |---|---|
-| [`blender_console/`](blender_console/) | Console core + 29 `_live.py` machine acceptance suites |
+| [`blender_console/`](blender_console/) | Console core + 30 `_live.py` machine acceptance suites |
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | Deployment payload (55 py, diff-checked against mainline) |
 | [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
 | [`release/`](release/) | Release manifest (147-file five-layer inventory) |
 
 ## Verification status
 
-M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression baseline: **29 suites ≈ 688 assertions**.
+M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression baseline: **30 suites ≈ 696 assertions**.
 
 <details>
 <summary><b>Suite highlights (click to expand)</b></summary>

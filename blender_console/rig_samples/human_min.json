@@ -1,0 +1,23 @@
+{
+  "_comment": "sample 模板 · human_min — M4-12 最小人形 rig 示范（AI 抄此格式）。7 骨骼两遍建骨（parent 只要求引用存在，不要求声明顺序）；expressions 用 ARKit-52 白名单名。mesh 字段指向宿主网格（本例由验收脚本程序化建出）。",
+  "name": "human_min",
+  "bones": [
+    {"name": "root",  "head": [0.0, 0.0, 0.00], "tail": [0.0, 0.0, 0.10]},
+    {"name": "spine", "head": [0.0, 0.0, 0.10], "tail": [0.0, 0.0, 0.60], "parent": "root"},
+    {"name": "neck",  "head": [0.0, 0.0, 0.60], "tail": [0.0, 0.0, 0.70], "parent": "spine"},
+    {"name": "head",  "head": [0.0, 0.0, 0.70], "tail": [0.0, 0.0, 0.85], "parent": "neck"},
+    {"name": "jaw",   "head": [0.0, -0.02, 0.72], "tail": [0.0, 0.02, 0.75], "parent": "head", "rigify_type": "basic.raw_copy"},
+    {"name": "eye.L", "head": [-0.03, -0.05, 0.78], "tail": [-0.03, -0.10, 0.78], "parent": "head"},
+    {"name": "eye.R", "head": [0.03, -0.05, 0.78], "tail": [0.03, -0.10, 0.78], "parent": "head"}
+  ],
+  "collections": [
+    {"name": "Main", "ui_row": 1, "bones": ["root", "spine", "neck", "head", "jaw"]},
+    {"name": "Face", "ui_row": 2, "bones": ["jaw", "eye.L", "eye.R"]}
+  ],
+  "deform": true,
+  "expressions": {
+    "mesh": "AI_HumanFace",
+    "values": {"jawOpen": 0.4, "mouthSmileLeft": 0.6, "mouthSmileRight": 0.6},
+    "make_channels": true
+  }
+}

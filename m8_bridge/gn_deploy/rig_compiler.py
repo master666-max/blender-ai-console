@@ -19,8 +19,15 @@ rig_json schema v1（最小闭环；sample 模板路径留 v2）：
      ],
      "collections": [                       # 可选；缺省自动建 "Main" ui_row=1 全收
        {"name": "Main", "ui_row": 1, "bones": ["root", "spine"]}],
-     "deform": true                         # 可选：骨骼 use_deform（默认 True）
+     "deform": true,                        # 可选：骨骼 use_deform（默认 True）
+     "expressions": {                       # 可选（R7f）：ARKit-52 表情通道
+       "mesh": "AI_Face",                   # 必填：宿主 mesh 对象名（编译期查在场+类型）
+       "values": {"jawOpen": 0.4},          # 必填：{ARKit-52 白名单名: 0..1}
+       "make_channels": true}               # 可选：建 shape key 通道（默认 true）
     }
+# expressions 语义（诚实边界）：v1 交付 = ARKit-52 标准命名 shape key 通道 +
+# 数值驱动接口（对齐 ARKit/Mixamo/MetaHuman 生态导入约定）；通道形状偏移为
+# 占位（零偏移）——真实表情形状需美术资产或后续生成管线。
 
 5.2 / Rigify 0.6.x 实锤（m412_probe R7-1 沉淀，逐条对应实现）：
   * 生成入口 bpy.ops.pose.rigify_generate（旧 pose API 存活）
@@ -62,9 +69,81 @@ class RigConstraintError(Exception):
 # ─────────────────────────────────────────────────────────────
 # 纯 Python 校验层（无 bpy——预校验可移植，对齐 mat_compiler 分层）
 # ─────────────────────────────────────────────────────────────
-ALLOWED_FIELDS = {"name", "bones", "collections", "deform"}
+ALLOWED_FIELDS = {"name", "bones", "collections", "deform", "expressions"}
 BONE_FIELDS = {"name", "head", "tail", "parent", "rigify_type", "roll", "collection"}
 COLL_FIELDS = {"name", "ui_row", "bones"}
+
+# Apple ARKit Face Tracking 52 blendshape 标准名（ARBlendShapeLocation 全集）——
+# 表情通道命名白名单（对齐 ARKit / Mixamo / MetaHuman 生态导入约定）。
+ARKIT_52 = frozenset({
+    "browDownLeft", "browDownRight", "browInnerUp",
+    "browOuterUpLeft", "browOuterUpRight",
+    "cheekPuff", "cheekSquintLeft", "cheekSquintRight",
+    "eyeBlinkLeft", "eyeBlinkRight",
+    "eyeLookDownLeft", "eyeLookDownRight", "eyeLookInLeft", "eyeLookInRight",
+    "eyeLookOutLeft", "eyeLookOutRight", "eyeLookUpLeft", "eyeLookUpRight",
+    "eyeSquintLeft", "eyeSquintRight", "eyeWideLeft", "eyeWideRight",
+    "jawForward", "jawLeft", "jawOpen", "jawRight",
+    "mouthClose", "mouthDimpleLeft", "mouthDimpleRight",
+    "mouthFrownLeft", "mouthFrownRight", "mouthFunnel",
+    "mouthLeft", "mouthRight",
+    "mouthLowerDownLeft", "mouthLowerDownRight",
+    "mouthPressLeft", "mouthPressRight",
+    "mouthPucker", "mouthRollLower", "mouthRollUpper",
+    "mouthShrugLower", "mouthShrugUpper",
+    "mouthSmileLeft", "mouthSmileRight",
+    "mouthStretchLeft", "mouthStretchRight",
+    "mouthUpperUpLeft", "mouthUpperUpRight",
+    "noseSneerLeft", "noseSneerRight",
+    "tongueOut",
+})
+EXPR_FIELDS = {"mesh", "values", "make_channels"}
+
+
+def _validate_expressions(expr: Any) -> dict:
+    """expressions 维度校验（纯 Python）：ARKit-52 白名单 + 值域 0..1。"""
+    if not isinstance(expr, dict):
+        raise RigConstraintError(
+            f"expressions 必须是 dict，实得 {type(expr).__name__}", code="RIG_EXPR_TYPE")
+    bad = [k for k in expr if k not in EXPR_FIELDS]
+    if bad:
+        raise RigConstraintError(
+            f"expressions 未知字段 {bad}；允许 {sorted(EXPR_FIELDS)}",
+            code="RIG_EXPR_FIELD")
+    mesh = expr.get("mesh")
+    if not isinstance(mesh, str) or not mesh.strip():
+        raise RigConstraintError(
+            "expressions.mesh 必须是非空字符串（shape key 通道的宿主 mesh 对象名）",
+            code="RIG_EXPR_MESH")
+    values = expr.get("values")
+    if not isinstance(values, dict) or not values:
+        raise RigConstraintError(
+            "expressions.values 必须是非空 dict（{ARKit-52 名: 0..1}）",
+            code="RIG_EXPR_VALUES")
+    for k, v in values.items():
+        if k not in ARKIT_52:
+            raise RigConstraintError(
+                f"expressions.values 键 {k!r} 不在 ARKit-52 白名单",
+                code="RIG_BSD_NAME_UNKNOWN",
+                suggestions=[{"action": "replace_value", "target": f"expressions.values.{k}",
+                              "value": sorted(ARKIT_52)[:24]}])
+        try:
+            fv = float(v)
+        except (TypeError, ValueError) as e:
+            raise RigConstraintError(
+                f"expressions.values[{k!r}] 必须是数值，实得 {v!r}",
+                code="RIG_BSD_VALUE_TYPE") from e
+        if not 0.0 <= fv <= 1.0:
+            raise RigConstraintError(
+                f"expressions.values[{k!r}]={fv} 越界（合法 0..1）",
+                code="RIG_BSD_VALUE_RANGE")
+    make_channels = expr.get("make_channels", True)
+    if not isinstance(make_channels, bool):
+        raise RigConstraintError(
+            "expressions.make_channels 必须是布尔", code="RIG_EXPR_MAKE_TYPE")
+    return {"mesh": mesh,
+            "values": {k: float(v) for k, v in values.items()},
+            "make_channels": make_channels}
 
 
 def _vec3(v: Any, where: str) -> list[float]:
@@ -86,7 +165,9 @@ def normalize_rig_plan(rig_json: dict) -> dict:
     if not isinstance(rig_json, dict):
         raise RigConstraintError(
             f"rig_json 必须是 dict，实得 {type(rig_json).__name__}", code="RIG_PLAN_TYPE")
-    unknown = [k for k in rig_json if k not in ALLOWED_FIELDS]
+    unknown = [k for k in rig_json
+               if k not in ALLOWED_FIELDS and not k.startswith("_")]
+    # `_` 前缀 = 文档性注记（对 AI 宽容：sample/plan 允许携带 _comment 等元字段）
     if unknown:
         raise RigConstraintError(
             f"rig_json 未知字段 {unknown}；允许 {sorted(ALLOWED_FIELDS)}",
@@ -186,8 +267,12 @@ def normalize_rig_plan(rig_json: dict) -> dict:
     deform = rig_json.get("deform", True)
     if not isinstance(deform, bool):
         raise RigConstraintError("deform 必须是布尔", code="RIG_DEFORM_TYPE")
+    expressions = None
+    if "expressions" in rig_json:
+        expressions = _validate_expressions(rig_json["expressions"])
     return {"name": rig_json.get("name"), "bones": norm_bones,
-            "collections": norm_colls, "deform": deform}
+            "collections": norm_colls, "deform": deform,
+            "expressions": expressions}
 
 
 def rig_fingerprint(rig_json: dict) -> str:
@@ -349,6 +434,39 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
                 b.use_deform = True
         deform_patched = True
 
+    # expressions（ARKit-52 表情通道；R7f）：宿主 mesh 上建 basis + 各声明名
+    # shape key，value=声明值；已有同名 SK 只设值（幂等）。诚实边界：v1 通道
+    # 形状偏移为占位（相对 basis 零偏移）——真实表情形状需美术资产/生成管线；
+    # v1 交付 = ARKit-52 标准命名通道 + 数值驱动接口（对齐生态导入约定）。
+    expr_detail = None
+    if norm["expressions"] is not None:
+        ex = norm["expressions"]
+        mesh_obj = bpy.data.objects.get(ex["mesh"])
+        if mesh_obj is None:
+            raise RigConstraintError(
+                f"expressions.mesh {ex['mesh']!r} 不在场景",
+                code="RIG_EXPR_MESH_UNKNOWN",
+                suggestions=[{"action": "fix_reference", "target": "expressions.mesh",
+                              "known": sorted(o.name for o in bpy.data.objects
+                                              if o.type == "MESH")[:20]}])
+        if mesh_obj.type != "MESH":
+            raise RigConstraintError(
+                f"expressions.mesh {ex['mesh']!r} 不是 MESH（实得 {mesh_obj.type}）",
+                code="RIG_EXPR_MESH_NOT_MESH")
+        made_channels: list[list] = []
+        if ex["make_channels"]:
+            if mesh_obj.data.shape_keys is None:
+                mesh_obj.shape_key_add(name="Basis", from_mix=False)
+            for k, v in ex["values"].items():
+                kb = mesh_obj.data.shape_keys.key_blocks.get(k)
+                if kb is None:
+                    kb = mesh_obj.shape_key_add(name=k, from_mix=False)
+                kb.value = v
+                made_channels.append([k, v])
+        expr_detail = {"mesh": ex["mesh"], "channels": made_channels,
+                       "n_channels": len(made_channels),
+                       "make_channels": ex["make_channels"]}
+
     obj["rig_plan_fp"] = fp
     # float32 容差对账（probe E1 实锤）：读回 head 与 plan 差 ≤1e-6
     drift = []
@@ -367,4 +485,5 @@ def compile_rig(bpy, rig_json: dict, name: str | None = None) -> dict:
             "deform_patched": deform_patched,
             "deform_bones": [b.name for b in rig_obj.data.bones if b.use_deform],
             "collections": [c.name for c in arm.collections],
-            "basic_type_used": basic_type}
+            "basic_type_used": basic_type,
+            "expressions": expr_detail}
