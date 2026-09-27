@@ -1,116 +1,116 @@
-**English** | [简体中文](README.zh-CN.md)
+[English](README.en.md) | **简体中文**
 
 <div align="center">
 
-# Blender AI Modeling Console
+# Blender AI 建模控制台
 
-**LLMs should declare models, not write scripts.**
+**让 LLM 声明模型，而不是写脚本。**
 
-*A plan–compile–verify console for Blender: the LLM emits plan-JSON, deterministic compilers land it in Geometry Nodes / materials / cameras / rigs, and a machine verifier gates every step.*
+*面向 Blender 的 plan–compile–verify 控制台：LLM 输出 plan-JSON，确定性编译器落到几何节点 / 材质 / 相机 / 角色 rig，机器 verifier 把守每一步。*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Blender](https://img.shields.io/badge/Blender-5.2-orange)](https://www.blender.org/)
 [![Runtime](https://img.shields.io/badge/runtime-bpy-blue)](https://docs.blender.org/api/current/)
-[![Tests](https://img.shields.io/badge/tests-29_suites_%7E688_assertions-brightgreen)](#verification-status)
+[![Tests](https://img.shields.io/badge/tests-29_suites_%7E688_assertions-brightgreen)](#验收状态)
 [![Stars](https://img.shields.io/github/stars/master666-max/blender-ai-console?style=flat&logo=github)](https://github.com/master666-max/blender-ai-console/stargazers)
 
-[Architecture](#architecture) · [Quick Start](#quick-start) · [Repo Layout](#repo-layout) · [Verification Status](#verification-status) · [Roadmap](#roadmap)
+[架构](#架构) · [快速开始](#快速开始) · [仓库结构](#仓库结构) · [验收状态](#验收状态) · [路线图](#路线图)
 
 </div>
 
 ---
 
-## Architecture
+## 架构
 
 ```mermaid
 flowchart LR
-    subgraph INTENT [Conversation]
-        U[User intent] --> L[LLM emits plan-JSON]
+    subgraph INTENT [对话层]
+        U[用户意图] --> L[LLM 生成 plan-JSON]
     end
-    subgraph COMPILE [Deterministic compilation]
-        P[Schema + whitelist validation] --> C[M4 compilers<br/>GN · material · rig · camera]
+    subgraph COMPILE [确定性编译层]
+        P[schema + 白名单校验] --> C[M4 编译器<br/>GN · 材质 · rig · 相机]
         C --> B[("Blender 5.2 bpy")]
     end
-    subgraph VERIFY [Machine verification]
-        V[M2 predicate family<br/>M3 render diff + perceptual hash]
+    subgraph VERIFY [真机验证层]
+        V[M2 谓词族<br/>M3 渲染 diff + 感知哈希]
     end
     L --> P
     B --> V
-    V -- "structured error codes → self-repair / escalate" --> P
-    V -- "pass" --> OK["commit · present · rollback anchor"]
+    V -- "结构化错误码 → 自修 / 升级" --> P
+    V -- "通过" --> OK["提交 · 呈现 · 回滚锚点"]
     style INTENT fill:#e8f0fe,stroke:#4285f4
     style COMPILE fill:#e6f4ea,stroke:#34a853
     style VERIFY fill:#fef7e0,stroke:#f9ab00
 ```
 
-Ten modules, each with its own acceptance suite: **M1** data (FlowDAG / WAL + hash chain / step replay), **M2** verification (structure / render / BIM predicates + tiered gates), **M3** rendering (same-camera diff), **M4** compilation (GN / materials incl. procedural / Rigify rigs), **M5** interaction (A/B dual-compile), **M6** experience (preference learning + EMD offline calibration), **M7** director mode, **M8** fusion & release engineering, **M9** conversational frontend, **M10** static web console.
+十个模块各带验收套件：**M1** 数据层（FlowDAG / WAL+哈希链 / Step 可重放）、**M2** 验证层（结构/渲染/BIM 谓词 + 分级门禁）、**M3** 渲染层（同机位 diff）、**M4** 编译层（GN / 材质含 procedural / Rigify rig）、**M5** 交互层（A/B 双编译）、**M6** 经验库（偏好学习 + EMD 离线标定）、**M7** 导演模式、**M8** 融合与发布工程、**M9** 对话前端、**M10** 静态 Web 控制台。
 
-## Quick Start
+## 快速开始
 
 ```bash
 git clone https://github.com/master666-max/blender-ai-console.git
 cd blender-ai-console
 
-# Live acceptance (needs Blender 5.2's bundled Python / bpy)
-python blender_console/m8r4_live.py     # material & presentation suite  20/20
-python blender_console/m412b_live.py    # character pipeline integration 17/17
+# 真机验收（需 Blender 5.2 自带 Python / bpy）
+python blender_console/m8r4_live.py     # 素材与呈现套件     20/20
+python blender_console/m412b_live.py    # 角色管线集成       17/17
 
-# Web console self-test (no Blender required)
+# Web 控制台自检（无需 Blender）
 cd m9_web && node _selftest.mjs         # 42/42
 ```
 
-Pure-Python unit tests (no bpy): `python blender_console/test_upstream_store.py`
+纯 Python 单测（无 bpy 依赖）：`python blender_console/test_upstream_store.py`
 
-All paths in the codebase are derived relative to the repo root — no machine-specific absolute paths.
+全仓库路径均相对仓库根推导——不含任何机器相关的绝对路径。
 
-## Repo Layout
+## 仓库结构
 
-| Path | Content |
+| 路径 | 内容 |
 |---|---|
-| [`blender_console/`](blender_console/) | Console core + 29 `_live.py` machine acceptance suites |
-| [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | Deployment payload (55 py, diff-checked against mainline) |
-| [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
-| [`release/`](release/) | Release manifest (147-file five-layer inventory) |
-| Work-order / handover / planning ledgers | Kept out of the repo — decision records live outside the codebase |
+| [`blender_console/`](blender_console/) | 控制台主体 + 29 套 `_live.py` 真机验收 |
+| [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | 部署载荷（55 py，与主线 diff 校验一致） |
+| [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
+| [`release/`](release/) | 发布 manifest（147 文件五层清单） |
+| 工单 / 交接文档 / 进度规划 | 不入仓库——决策记录留在代码库之外 |
 
-## Verification Status
+## 验收状态
 
-M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression baseline: **29 suites ≈ 688 assertions**.
+M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**29 套 ≈ 688 断言**。
 
 <details>
-<summary><b>Suite highlights (click to expand)</b></summary>
+<summary><b>套件亮点（点击展开）</b></summary>
 
-| Suite | Covers |
+| 套件 | 覆盖 |
 |---|---|
-| `m8r4_live` 20/20 | Procedural wood compile / replay idempotency / structured rejections / presentation rig + 0-drift cross-check |
-| `exp5_live` 6/6 | Vertex fingerprint A/B: Gear FastCDC three-way, verdict "fall back to geometric fingerprints" |
-| `m412b_live` 17/17 | Character pipeline console integration |
-| `m412_live` 6/6 | Rig compiler, deformation quality IoU(128³) = 1.0 |
-| `test_bim` 19/19 | BIM predicates (data-level) |
-| `exp7_live` 3/3 | Process-gate three-way comparison (left-shift effect) |
-| `m6_live` 31/31 | AB → preference learning / override write-back / diversity gate |
-| Remaining 20+ suites | M1-M5 / M7 / M9 / M10 regression & smoke |
+| `m8r4_live` 20/20 | Procedural 木纹编译 / 重放幂等 / 结构化拒绝 / 呈现档 + 0 漂移互证 |
+| `exp5_live` 6/6 | 顶点指纹 A/B：Gear FastCDC 三路对照，判定"退回几何量指纹" |
+| `m412b_live` 17/17 | 角色管线 console 集成 |
+| `m412_live` 6/6 | rig 编译器，形变质量 IoU(128³) = 1.0 |
+| `test_bim` 19/19 | BIM 谓词（数据级） |
+| `exp7_live` 3/3 | 工艺门禁三组对照（左移效应） |
+| `m6_live` 31/31 | AB → 偏好学习 / override 回写 / 多样性闸门 |
+| 其余 20+ 套 | M1-M5 / M7 / M9 / M10 回归与冒烟 |
 
 </details>
 
-## Roadmap
+## 路线图
 
-- [x] M1–M10 mainline + release inversion (whl 2.1.0-gn pinned)
-- [x] R7 deep water: character pipeline (incl. console integration) / EMD calibration / BIM predicates / material assets / vertex-fingerprint verdict
-- [ ] M9-5 flicker vs side-by-side preference A/B (flicker.html ready; needs human experiment)
-- [ ] Long-term: annotation back-reference · audio channel · HAMT · ARKit-52 blendshapes · multi-rig coexistence
+- [x] M1–M10 主线 + 发布反转（whl 2.1.0-gn 定版）
+- [x] R7 深水区：角色管线（含 console 集成）/ EMD 标定 / BIM 谓词 / 材质素材 / 顶点指纹判定
+- [ ] M9-5 闪烁 vs 并排偏好 A/B（flicker.html 已就绪，待真人实验）
+- [ ] 远期：标注反查 · 声音通道 · HAMT · ARKit-52 表情 schema · 多 rig 共存
 
-## Acknowledgments
+## 致谢
 
-This project stands on the shoulders of:
+本项目站在以下工作的肩膀上：
 
-- **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)** (MIT, © 2025 Siddharth Ahuja) — the transport layer (sandbox, telemetry, consent and config modules) is vendored under [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/) and extended with 8 GN tool bindings; its original license notice is preserved in that directory's [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE).
-- **[Blender](https://www.blender.org/)** and the bpy community — the substrate everything runs on.
+- **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
+- **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
 
 ## License
 
 <div align="center">
 
-[MIT](LICENSE) © 2026 · *Treat every pixel with engineering discipline.*
+[MIT](LICENSE) © 2026 · *以工程纪律对待每一个像素。*
 
 </div>
