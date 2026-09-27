@@ -6,19 +6,49 @@
 
 **让 LLM 声明模型，而不是写脚本。**
 
-*面向 Blender 的 plan–compile–verify 控制台：LLM 输出 plan-JSON，确定性编译器落到几何节点 / 材质 / 相机 / 角色 rig，机器 verifier 把守每一步。*
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Blender](https://img.shields.io/badge/Blender-5.2-orange)](https://www.blender.org/)
 [![Runtime](https://img.shields.io/badge/runtime-bpy-blue)](https://docs.blender.org/api/current/)
 [![Tests](https://img.shields.io/badge/tests-29_suites_%7E688_assertions-brightgreen)](#验收状态)
-[![Stars](https://img.shields.io/github/stars/master666-max/blender-ai-console?style=flat&logo=github)](https://github.com/master666-max/blender-ai-console/stargazers)
 
-[架构](#架构) · [快速开始](#快速开始) · [仓库结构](#仓库结构) · [验收状态](#验收状态) · [路线图](#路线图)
+[这是什么](#这是什么) · [核心特性](#核心特性) · [快速开始](#快速开始) · [架构](#架构) · [验收状态](#验收状态) · [路线图](#路线图)
 
 </div>
 
----
+## 这是什么
+
+一套跑在 Blender 5.2 里的 AI 建模控制台。
+
+主流「AI + Blender」方案让 LLM 直接写并执行 bpy 脚本——能跑，但无法重放、无法审计、无法撤销。这里换成另一条路：**LLM 只声明 plan-JSON，确定性编译器落地，机械 verifier 把守每一步**。
+
+对话中的每个段落都是一个可重放、可回退、可审计的单元；每一次提交都有同机位渲染 diff 与 29 套真机验收套件（≈688 断言）背书。
+
+## 核心特性
+
+- **Plan–compile–verify 闭环** —— LLM 永不产出可执行代码；schema + 白名单校验拦截一切越界输入，编译器确定性落地。
+- **零静默逃逸** —— 编译失败响亮抛错并回滚，几何缺陷由机械 verifier 拦截：11 个盲写样本中，通过 verifier 的产物语义全部正确。
+- **契约即杠杆** —— 实测补 4 行缺失文档，LLM 首版成功率 0% → 80%；契约、错误码、schema 是一等公民。
+- **段落 = 三重边界** —— 每个对话段落同时是执行单元、上下文压缩单元、回退单元（WAL + 哈希链，可重放、可回溯撤销）。
+- **同机位渲染 diff 作地面真值** —— 固定机位渲染 + 感知哈希；呈现档与 diff 管线两档并存，每次渲染后恢复状态，互证 0 像素漂移。
+- **负结果也是交付** —— 顶点指纹 A/B 判定「不接入」并发现 Morton 薄层散射；Blender 5.2 移除 Delta Mush 后裁决 Corrective Smooth 替代。
+
+## 快速开始
+
+```bash
+git clone https://github.com/master666-max/blender-ai-console.git
+cd blender-ai-console
+
+# 真机验收（需 Blender 5.2 自带 Python / bpy）
+python blender_console/m8r4_live.py     # 素材与呈现套件     20/20
+python blender_console/m412b_live.py    # 角色管线集成       17/17
+
+# Web 控制台自检（无需 Blender）
+cd m9_web && node _selftest.mjs         # 42/42
+```
+
+纯 Python 单测（无 bpy 依赖）：`python blender_console/test_upstream_store.py`
+
+跑通即验收——每套 `_live.py` 都在真实 Blender 5.2 会话里断言。全仓库路径均相对仓库根推导，不含任何机器相关的绝对路径。
 
 ## 架构
 
@@ -45,24 +75,6 @@ flowchart LR
 
 十个模块各带验收套件：**M1** 数据层（FlowDAG / WAL+哈希链 / Step 可重放）、**M2** 验证层（结构/渲染/BIM 谓词 + 分级门禁）、**M3** 渲染层（同机位 diff）、**M4** 编译层（GN / 材质含 procedural / Rigify rig）、**M5** 交互层（A/B 双编译）、**M6** 经验库（偏好学习 + EMD 离线标定）、**M7** 导演模式、**M8** 融合与发布工程、**M9** 对话前端、**M10** 静态 Web 控制台。
 
-## 快速开始
-
-```bash
-git clone https://github.com/master666-max/blender-ai-console.git
-cd blender-ai-console
-
-# 真机验收（需 Blender 5.2 自带 Python / bpy）
-python blender_console/m8r4_live.py     # 素材与呈现套件     20/20
-python blender_console/m412b_live.py    # 角色管线集成       17/17
-
-# Web 控制台自检（无需 Blender）
-cd m9_web && node _selftest.mjs         # 42/42
-```
-
-纯 Python 单测（无 bpy 依赖）：`python blender_console/test_upstream_store.py`
-
-全仓库路径均相对仓库根推导——不含任何机器相关的绝对路径。
-
 ## 仓库结构
 
 | 路径 | 内容 |
@@ -71,7 +83,6 @@ cd m9_web && node _selftest.mjs         # 42/42
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | 部署载荷（55 py，与主线 diff 校验一致） |
 | [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
 | [`release/`](release/) | 发布 manifest（147 文件五层清单） |
-| 工单 / 交接文档 / 进度规划 | 不入仓库——决策记录留在代码库之外 |
 
 ## 验收状态
 
@@ -101,8 +112,6 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**29 �
 - [ ] 远期：标注反查 · 声音通道 · HAMT · ARKit-52 表情 schema · 多 rig 共存
 
 ## 致谢
-
-本项目站在以下工作的肩膀上：
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
 - **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
