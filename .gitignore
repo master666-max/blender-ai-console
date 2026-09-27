@@ -28,3 +28,9 @@ conversation-data.json
 /_pathfix.py
 /_gen_preview.py
 /_readme_preview.html
+
+# 运行/构建产物（可再生成，不入库）
+m8_bridge/*_result.json
+m8_bridge/*.whl
+blender_server_log.txt
+*_wal*/
