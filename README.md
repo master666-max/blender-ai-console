@@ -91,6 +91,7 @@ All paths in the codebase are derived relative to the repo root — no machine-s
 | [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
 | [`release/`](release/) | Release manifest (147-file five-layer inventory) |
 | [`docs/img/`](docs/img/) | Rendered frames used in this README |
+| [`上游隔离区/`](<上游隔离区/>) | Read-only upstream material (mechanism & craft library) — absorbed, never imported |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | Academic pre-research backing the design decisions |
 | Work-order / handover / planning ledgers | Decision records, acceptance criteria, honest known-gaps |
 
@@ -126,7 +127,7 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 This project stands on the shoulders of:
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)** (MIT, © 2025 Siddharth Ahuja) — the transport layer (sandbox, telemetry, consent and config modules) is vendored under [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/) and extended with 8 GN tool bindings; its original license notice is preserved in that directory's [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE).
-- **blender-mcp-skill v2.9.4** — an upstream skill package whose craft library, mechanism fragments and experience entries (EXP-001~014) were reviewed item-by-item and absorbed *as ideas* into the mainline — never imported, never redistributed verbatim.
+- **blender-mcp-skill v2.9.4** — the author's own earlier skill project. Its craft library, mechanism fragments and experience entries (EXP-001~014) were reviewed item-by-item and absorbed into the mainline (ideas first, code per review verdict); the read-only review archive is kept verbatim under [`上游隔离区/`](<上游隔离区/>) — absorbed, never imported.
 - **[Blender](https://www.blender.org/)** and the bpy community — the substrate everything runs on.
 
 ## License

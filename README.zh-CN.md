@@ -91,6 +91,7 @@ cd m9_web && node _selftest.mjs         # 42/42
 | [`m9_web/`](m9_web/) | 静态 Web 控制台 + 闪烁 diff 查看器 |
 | [`release/`](release/) | 发布 manifest（147 文件五层清单） |
 | [`docs/img/`](docs/img/) | 本 README 使用的渲染帧 |
+| [`上游隔离区/`](<上游隔离区/>) | 只读上游素材（机制库 / 工艺库）——只吸收、不 import |
 | [`深度调研/`](深度调研/) · [`预调研/`](预调研/) · [`算法路线调研/`](算法路线调研/) | 支撑设计决策的学术预调研 |
 | 工单 / 交接文档 / 进度规划 | 决策记录、验收口径、诚实缺口登记 |
 
@@ -126,7 +127,7 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**29 �
 本项目站在以下工作的肩膀上：
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
-- **blender-mcp-skill v2.9.4**——上游 skill 包，其工艺库、机制片段与经验条目（EXP-001~014）经逐项人工审查后以**思想吸收**方式进入主线——不 import、不逐字再分发。
+- **blender-mcp-skill v2.9.4**——同一作者的先行 skill 项目。其工艺库、机制片段与经验条目（EXP-001~014）经逐项人工审查后进入主线（思想优先，代码按审查判定吸收）；只读审查档案以逐字快照保留于 [`上游隔离区/`](<上游隔离区/>)——只吸收、不 import。
 - **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
 
 ## License
