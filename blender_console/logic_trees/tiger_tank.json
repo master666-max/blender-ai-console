@@ -1,0 +1,309 @@
+{
+ "schema_version": "2.0",
+ "object": "tiger_tank",
+ "prompt": "1:35 二战德军虎式坦克后期型（1944 Henschel 炮塔）静态展示模型",
+ "meta": {
+  "purpose": "AI 侧 plan 分解模板 + 人侧质量门清单；v2.0：tier 落地/谓词化门/instances 批量门/换算单一真源/节点状态机",
+  "tier_rules": {
+   "tier1": "判据不可降格（门禁数值），省略门须留痕",
+   "tier2": "默认打法（build 字段），允许声明式偏离",
+   "tier3": "条件表（visual 备注），按适用取用"
+  },
+  "gate_format": "机验门 = machine_spec 谓词（expr+tol，接几何求值）；目验门 = visual 文本（留人）；修正指令必须引用所见",
+  "scale": "1:35",
+  "scale_factor": 35,
+  "units": "params_real 存实尺 mm（单一真源）；渲染 mm = 实尺 / scale_factor（由 logic_tree.py 机器换算，禁止手写）",
+  "authority": "执行拓扑权威 = deps（拓扑序）；layer 仅作展示分组",
+  "period": "1944 后期型",
+  "variant": "Henschel"
+ },
+ "reference": {
+  "length_mm": 6320,
+  "width_mm": 3705,
+  "height_mm": 3000,
+  "front_armor_mm": 102,
+  "side_armor_mm": 82,
+  "gun_caliber_mm": 88,
+  "gun_barrel_len_mm": 4930,
+  "track_width_mm": 725,
+  "roadwheel_dia_mm": 800,
+  "roadwheels_total": 16,
+  "turret_ring_dia_mm": 1850
+ },
+ "nodes": [
+  {
+   "id": "1.1",
+   "layer": "L1 底盘功能",
+   "name": "车体装甲盒",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "armor_box",
+    "params_real": {"L": 6320, "W": 3705, "H": 3000},
+    "note": "Henschel 全焊接车体，垂直装甲（非倾斜）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "bbox_xyz", "ref": "reference", "tol_mm": 2.0},
+    "machine": "外廓 181±2 x 105±2 x 85±2 mm（@1:35），calc_volume>0",
+    "visual": "车体无穿帮破面"
+   },
+   "deps": []
+  },
+  {
+   "id": "1.2",
+   "layer": "L1 底盘功能",
+   "name": "行走机构",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "wheel_row",
+    "instances": {"count": 16, "per_side": 8, "layout": "interleaved"},
+    "params_real": {"wheel_dia": 800, "axle_span_mm": 120},
+    "note": "交错负重轮（Schachtellaufwerk），扭杆悬挂位"
+   },
+   "gate": {
+    "machine_spec": {"expr": "instance_count==16 && per_wheel_dia", "tol_mm": 0.3},
+    "machine": "负重轮 16 只逐实例，轮距公差 ±0.3mm（instances 批量门逐轮出结果）",
+    "visual": "交错排列视觉成立"
+   },
+   "deps": ["1.1"]
+  },
+  {
+   "id": "1.3",
+   "layer": "L1 底盘功能",
+   "name": "履带",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "track_loop",
+    "params_real": {"width": 725, "pitch": 130},
+    "note": "战斗履带，环抱行走机构"
+   },
+   "gate": {
+    "machine_spec": {"expr": "track_circumference", "tol_pct": 1.0},
+    "machine": "履带环周长 ±1%",
+    "visual": "贴合负重轮无悬空"
+   },
+   "deps": ["1.2"]
+  },
+  {
+   "id": "1.4",
+   "layer": "L1 底盘功能",
+   "name": "动力舱格栅",
+   "tier": 2,
+   "status": "pending",
+   "build": {
+    "op": "grille",
+    "instances": {"count": 4, "layout": "row"},
+    "params_real": {"span_x": [0.70, 0.92], "z": "deck"},
+    "note": "Maybach HL230 散热格栅（车尾中部）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "grille_count==4 && x_range"},
+    "machine": "格栅 4 组，x∈[70%,92%]",
+    "visual": "格栅镂空可见"
+   },
+   "deps": ["1.1"]
+  },
+  {
+   "id": "2.1",
+   "layer": "L2 炮塔武器",
+   "name": "炮塔",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "turret_shell",
+    "params_real": {"ring_dia": 1850, "width": 2080},
+    "note": "Henschel 后期型炮塔（前部加厚）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "turret_ring_dia", "tol_mm": 1.0},
+    "machine": "炮塔环 d53mm（@1:35）",
+    "visual": "炮塔与车体环口贴合"
+   },
+   "deps": ["1.1"]
+  },
+  {
+   "id": "2.2",
+   "layer": "L2 炮塔武器",
+   "name": "主炮",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "gun_barrel",
+    "params_real": {"caliber": 88, "barrel_len": 4930, "exposed_at35": 141},
+    "note": "KwK.36 L/56：88mm x 56 倍径"
+   },
+   "gate": {
+    "machine_spec": {"expr": "barrel_len_at35", "tol_mm": 1.0},
+    "machine": "炮管 141±1mm，口径 2.5mm（@1:35）",
+    "visual": "炮管同轴无下垂"
+   },
+   "deps": ["2.1"]
+  },
+  {
+   "id": "2.3",
+   "layer": "L2 炮塔武器",
+   "name": "同轴机枪",
+   "tier": 3,
+   "status": "pending",
+   "build": {
+    "op": "mg_port",
+    "params_real": {"dia": 6, "pos_norm": [0.62, 0.18]},
+    "note": "MG34 枪管位（炮塔右前同轴口）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "mg_port_pos", "tol_mm": 0.2},
+    "machine": "枪管位 d6mm，归一坐标 x=0.62 y=0.18",
+    "visual": "枪口可见"
+   },
+   "deps": ["2.1"]
+  },
+  {
+   "id": "2.4",
+   "layer": "L2 炮塔武器",
+   "name": "舱门",
+   "tier": 2,
+   "status": "pending",
+   "build": {
+    "op": "hatch_pair",
+    "instances": {"count": 2, "layout": ["commander_round", "loader_square"]},
+    "params_real": {"pos_norm_x": [0.3, 0.7], "z": "turret_top"},
+    "note": "指挥官圆舱门（左）+ 装填手方舱门（右）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "hatch_count==2 && x_range"},
+    "machine": "舱门 2 组，x∈[0.3,0.7] 顶位",
+    "visual": "缝线清晰"
+   },
+   "deps": ["2.1"]
+  },
+  {
+   "id": "2.5",
+   "layer": "L2 炮塔武器",
+   "name": "防盾",
+   "tier": 2,
+   "status": "pending",
+   "build": {
+    "op": "mantlet",
+    "params_real": {"thick": 102},
+    "note": "Mantlet 铸造炮盾，包住炮管根"
+   },
+   "gate": {
+    "machine_spec": {"expr": "mantlet_thick_at35", "tol_mm": 0.3},
+    "machine": "厚 ≈2.9mm（@1:35）",
+    "visual": "与炮管同轴无穿模"
+   },
+   "deps": ["2.1", "2.2"]
+  },
+  {
+   "id": "3.1",
+   "layer": "L3 形态比例",
+   "name": "整体比例",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "proportion_check",
+    "params_real": {"len_no_gun": 6320, "height": 3000},
+    "note": "长:高 = 6320:3000 = 2.107"
+   },
+   "gate": {
+    "machine_spec": {"expr": "ratio_in", "range": [2.05, 2.15]},
+    "machine": "长:高 ∈ [2.05,2.15]（铁门禁）",
+    "visual": "剪影即虎式"
+   },
+   "deps": ["1.1", "2.1"]
+  },
+  {
+   "id": "3.2",
+   "layer": "L3 形态比例",
+   "name": "装甲垂直面",
+   "tier": 1,
+   "status": "pending",
+   "build": {
+    "op": "flat_armor_check",
+    "params_real": {"front": 102, "side": 82},
+    "note": "虎式为垂直装甲（非倾斜）：常见错误是误用倾斜装甲"
+   },
+   "gate": {
+    "machine_spec": {"expr": "face_normal_parallel_axis", "tol_deg": 0.5},
+    "machine": "装甲面法线平行车身轴 ±0.5°",
+    "visual": "无斜面错误"
+   },
+   "deps": ["1.1"]
+  },
+  {
+   "id": "3.3",
+   "layer": "L3 形态比例",
+   "name": "细节挂载",
+   "tier": 3,
+   "status": "pending",
+   "build": {
+    "op": "detail_kit",
+    "instances": {"count": 3, "layout": ["spare_track", "tools", "jack"]},
+    "params_real": {"mount_face": "front_upper"},
+    "note": "备用履带+工具钳+千斤顶，挂前上装甲板（定位依赖 3.2 垂直面）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "kit_count>=3"},
+    "machine": "挂载件 ≥3 组",
+    "visual": "细节密度成立"
+   },
+   "deps": ["1.1", "3.2"]
+  },
+  {
+   "id": "4.1",
+   "layer": "L4 材质涂装",
+   "name": "迷彩",
+   "tier": 2,
+   "status": "pending",
+   "build": {
+    "op": "camo_paint",
+    "params_real": {"base": "Dunkelgelb", "patch": "Olivgrun", "coverage_pct": [30, 45]},
+    "note": "1944 后期涂装"
+   },
+   "gate": {
+    "machine_spec": {"expr": "coverage_pct_in", "range": [30, 45]},
+    "machine": "斑块覆盖率 30~45%",
+    "visual": "边缘软硬适中"
+   },
+   "deps": ["3.1"]
+  },
+  {
+   "id": "4.2",
+   "layer": "L4 材质涂装",
+   "name": "旧化",
+   "tier": 3,
+   "status": "pending",
+   "build": {
+    "op": "weathering",
+    "params_real": {"rust_band_mm": 15},
+    "note": "履带锈蚀（对象=1.3）+ 排气烟熏（对象=1.4 格栅区）"
+   },
+   "gate": {
+    "machine_spec": {"expr": "rust_band", "tol_mm": 3.0},
+    "machine": "锈蚀带 = 履带全面 + 排气口周边 15mm",
+    "visual": "不脏面（法线完好）"
+   },
+   "deps": ["4.1", "1.3", "1.4"]
+  },
+  {
+   "id": "5.1",
+   "layer": "L5 场景",
+   "name": "展台",
+   "tier": 2,
+   "status": "pending",
+   "build": {
+    "op": "display_base",
+    "params_real": {"base": [220, 120]},
+    "note": "1:35 底座+比例尺牌，全车汇聚后入场"
+   },
+   "gate": {
+    "machine_spec": {"expr": "base_size && com_projection_inside"},
+    "machine": "底座 220x120mm，质心投影在底面内",
+    "visual": "构图重心稳"
+   },
+   "deps": ["1.3", "1.4", "2.5", "3.3", "4.2"]
+  }
+ ]
+}
