@@ -436,6 +436,15 @@ class Console:
         st = self._eval_stats()
         changed = self.table.report_output(seg, self._output_fp(st))
 
+        # W-14 自动触发（2026-09-29）：几何真变化的参数写入 = plan 修订一级事件，
+        # 自动入库（通道版→自动版）。库未激活时静默跳过（缺省通路零依赖）。
+        if changed and self.library is not None:
+            try:
+                self.note_plan_revision(f"{seg}.{param}: {old} → {pu.new}",
+                                        seg=seg, changed=True)
+            except Exception:                     # noqa: BLE001 入库失败不阻断参数写入
+                pass
+
         return self._ok("set_param",
             f"{seg}.{param}: {old} → {pu.new}（{'几何变化' if changed else '输出未变'}）",
             data={"dirty": dirty, "changed": changed, "stats": st})

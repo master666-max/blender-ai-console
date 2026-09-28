@@ -481,7 +481,7 @@ graph TB
 | W-11 | ~~失败工件考古接口缺失~~ **基础版销单（2026-09-29）**：console.archaeology()——遍历 WAL 收集 recompile/drop_segment/drop_part/override，按 seg 分组统计高危区（确定性共性解读）；真机实证 1 件丢弃物→高危区 [('B',1)]。**遗留**：失败分支 GN 状态快照（重量级）待 gn_artifact 扩展 |
 | ~~W-12~~ | ~~owner-session 与无主工件防毒~~ | **已销单（2026-09-29）**：ExperienceEntry.owner 字段 + record_ai/record_override 自动落账（ai:ai-channel / user-override）+ recall 防毒过滤器（无主件不可召回）+ from_dict 迁移（存量 → legacy:pre-W12 有主）；test_experience [7c] 4 断言（54/54）。安全属性落地 |
 | W-13 | **引用债/互惠网络**（Orr 互惠伦理：借件代接工单，团队共担责任）：多会话场景下 B 会话被 A 的 verified_failure 救过，B 的失败叙事应享优先晋升评审——让故事形成互助网 | 与 W-9 共用引用图；多会话运行时上线才有意义 |
-| W-14 | ~~plan 修订未入库为一级事件~~ **通道版销单（2026-09-29）**：console.note_plan_revision(reason, seg) → record_experience（kind=plan_revision，draft 晋升过人）；真机实证入库+recall 反哺命中（owner=ai:ai-channel）。**遗留**：视觉环自动触发（patch 即调）待导演模式接线 |
+| ~~W-14~~ | ~~plan 修订未入库为一级事件~~ **完全销单（2026-09-29）**：note_plan_revision 通道 + set_param 几何变化自动触发（changed=True 即入库，库未激活静默跳过——缺省通路零依赖）。Suchman"计划是资源"的落地完成 |
 
 > **重复挂单防护（2026-09-29 核对实录）**：Orr/PARC 学派那一批吸收件（故事地位经济学／共享词汇卡／垃圾桶原则／领地与孤机／互惠网络／Suchman 哲学底座）**已在案为 W-9~W-14 + ⑨b**；同日另有一份同源分析（追溯到同一批原著）若再次流入，**只许补增量、不许另起编号**。
 >
