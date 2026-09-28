@@ -510,13 +510,25 @@ class Console:
             f"回退到 {name}：{dt} ms，{st['faces']} 面", data={"ms": dt, **st})
 
     def pop_layer(self) -> ConsoleResult:
+        """物理删层（M3 原语）。2026-09-29 真机实验修复：此前只删 modifier+order.pop，
+        DAG/segments/specs 残留孤儿步 → 后续 drop_segment 的叶子约束炸
+        （step seg_b 有后继 seg_c——只许删叶子步）。清理对齐 drop_segment
+        的机械部分（无 drop_segment WAL 行——账目语义归 drop_segment）。"""
         if self.pivots:
             return self._err("pop_layer", "PIVOT_BLOCKED", "",
                              "pivot 后只许 forward recovery")
         t0 = time.perf_counter()
         name = self.order[-1]
+        rec = self.segments.get(name)
         self.obj.modifiers.remove(self.segments[name]["mod"])
         self.order.pop()
+        if rec is not None:
+            try:
+                self.dag.remove(rec["step_id"])   # 2026-09-29：清孤儿步
+            except Exception:                      # noqa: BLE001 步不存在时保持幂等
+                pass
+            self.segments.pop(name, None)
+            self._specs.pop(name, None)
         self.ad.invalidate(obj=self.obj)
         self.deps.update()
         dt = round((time.perf_counter() - t0) * 1000, 3)
@@ -525,7 +537,8 @@ class Console:
             f"删层 {name}：{dt} ms，{st['faces']} 面", data={"ms": dt, **st})
 
     def drop_segment(self, name: str) -> ConsoleResult:
-        """打回段落（导演 override 的机械部分）：删 modifier + 清 DAG 叶步 + 清簿记。
+        """打回段落（导演 override 的机械部分）：pop_layer（已含 modifier+DAG+
+        segments/specs 全清理，2026-09-29）+ drop_segment 账目行。
 
         只许打回**最后提案**的段落（order[-1]，无后继——DAG 叶子约束同）。
         vparams 里该段的键保留（历史账目不抹；重提同名段时会被新值覆盖）。
@@ -540,9 +553,6 @@ class Console:
         pop = self.pop_layer()
         if not pop.ok:
             return pop
-        self.dag.remove(rec["step_id"])
-        self.segments.pop(name, None)
-        self._specs.pop(name, None)
         self.wal.append("drop_segment", {"seg": name})
         return self._ok("drop_segment", f"已打回段落 {name}",
                         data={"ms": pop.data.get("ms")})
