@@ -87,7 +87,7 @@ class ExperienceEntry:
     tombstone: bool = False            # 墓碑（被取代/撤销）：保留不删，recall 跳过
     provenance: dict[str, Any] = field(default_factory=lambda: {
         "author": "", "source": "", "created": "",
-        "reused": 0, "reuse_success": 0, "variants": 0,
+        "reused": 0, "reuse_success": 0, "variants": 0, "recall_hits": 0,
     })
     weight: float = 1.0                # 降权系数落在这里（差异化衰减，见 mark_reuse）
     eid: str = ""                      # 内容寻址（add 时自动算）
@@ -116,7 +116,8 @@ class ExperienceEntry:
             tombstone=bool(d.get("tombstone", False)),
             provenance=d.get("provenance") or {
                 "author": "", "source": "", "created": "",
-                "reused": 0, "reuse_success": 0, "variants": 0},
+                "reused": 0, "reuse_success": 0, "variants": 0,
+                "recall_hits": 0},
             weight=float(d.get("weight", 1.0)),
             eid=d.get("eid", ""),
             owner=owner)
@@ -301,6 +302,7 @@ class ExperienceLibrary:
         p = entry.provenance
         p.setdefault("reused", 0)
         p.setdefault("reuse_success", 0)
+        p.setdefault("recall_hits", 0)
         p.setdefault("variants", 0)
         if author:
             p["author"] = author
@@ -342,10 +344,32 @@ class ExperienceLibrary:
                                   # WAL 能回滚现场，回滚不了被污染的检索
             hit = sum(1 for k, v in query.items() if e.trigger.get(k) == v)
             match = hit / len(query) if query else 0.5
+            # W-9 存活率闭环（2026-09-29，Orr 地位经济学）：被召回=被讲述——
+            # 流通即计数（match>0 才算真命中）。价值由存活率度量，不由撰写者自述。
+            if hit > 0:
+                p = e.provenance
+                p["recall_hits"] = int(p.get("recall_hits", 0)) + 1
             w = e.weight * (0.5 if e.status == "draft" else 1.0)
             scored.append((w * (0.5 + 0.5 * match), match, e))
         scored.sort(key=lambda t: (-t[0], t[1]))
-        return [e for _, _, e in scored[:n]]
+        hits = [e for _, _, e in scored[:n]]
+        if any(e.provenance.get("recall_hits") for e in hits):
+            self._save()                    # 流通计数落盘（消费被动的计量副作用）
+        return hits
+
+    def survival_rate(self, eid: str) -> float | None:
+        """W-9 故事存活率：reuse_success / recall_hits（被讲述后活下来的比例）。
+
+        None = 尚未被讲述（recall_hits=0）——没有流通就没有存活率，如实返回。
+        评分信号供查询方消费（hook 进 agent 评分）；**不反哺 recall 排序权重**
+        （防自增强反馈环：讲得多≠活得对）。"""
+        e = self.entries.get(eid)
+        if e is None:
+            raise KeyError(f"经验条目 {eid!r} 不存在")
+        hits = int(e.provenance.get("recall_hits", 0))
+        if hits == 0:
+            return None
+        return round(int(e.provenance.get("reuse_success", 0)) / hits, 4)
 
     def mark_reuse(self, eid: str, success: bool, had_variant: bool) -> None:
         """复用回写（M6-3 的库侧）：无变体复用 → **差异化衰减**（M6-2b）——

@@ -472,9 +472,9 @@ graph TB
 | W-5 | **intake 核心模块无内部调用方**：只被实验脚本 import，运行时调用方是 AI 会话层（进程外） | 会话层代码入库时销单 |
 
 | W-6 | **"四层索引"未实现**：experience 实际只有 trigger 键匹配 + weight 排序召回；向量/参数分布/图结构/时序四层索引是设计愿景（v1 图曾虚写"已实现"——2026-09-29 反向审计揪出） | 新索引层落地时销单，图⑥ C3 改实线描述 |
-| W-7 | **commits.commit 主链路未接线**：SegmentCommits.commit（m1_core.py:566）存在但 console.py 从不调用；段交付的 commit 账本只在 export_state 被读 | console 段 passed 后接 commits.commit 时销单 |
+| ~~W-7~~ | ~~commits.commit 主链路未接线~~ | **已销单（2026-09-29）**：console.compile 成功即 `commits.commit(seg, vparams快照, "fp:"+fingerprint, deps)`（内容寻址自动去重，revert/set_param 重编译产出新 hash）；E2E 实证 export_state.commits 五段全 hash |
 | W-8 | **blocked 幽灵状态**：logic_tree.STATUSES 含 blocked，但代码无任何转移将其置位（④ 的两条 blocked 入边在代码不存在） | 补置位逻辑（deps failed 时 next_ready 拒绝并置 blocked）或删状态时销单 |
-| W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量，不由撰写者自述）：provenance.reused/reuse_success 字段已存在（experience.py:90/333），但①recall 命中→自动 mark_reuse 的闭环缺失（靠外部显式调用）、②存活率→撰写 agent 评分信号缺失 | recall 自动计数闭环 + 评分信号上线时销单；与 W-13 共用引用图；**并须与 W-6 对齐**——存活率索引应登记为"四层索引"中的一层，两条挂单不得各自演化 |
+| W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量）：recall 命中自动计数 provenance.recall_hits（match>0 才算真命中，落盘）；survival_rate(eid)=reuse_success/recall_hits 暴露为评分信号——**不反哺排序权重**（防自增强反馈环）。test_experience [7d] 4 断言。**遗留**：与 W-6 对齐登记为四层索引之一层；评分信号 hook 进 agent 评分待接 | **部分销单**：计数闭环+survival_rate 已落地；评分信号 hook 与四层索引归并随 W-6 收口 |
 | ~~W-10~~ | ~~共享词汇卡未提供~~ | **已销单（2026-09-29）**：intake.py `vocab_card()` 挂在 ask_round 卡上——11 词条（segment/gate/G1/blockout/tier/set_param/patch/GoodPoint/revert/verified_failure/draft-promote），test_intake 22/22 |
 | W-11 | **失败工件考古接口缺失**（Orr 垃圾桶原则：老技师先翻废纸篓解读坏件共性）：中间产物**有痕无视图**——WAL 记 recompile(old_spec)/ab 落选（console.py:397/932），但 gn_verify 只回 ok+summary+suggestions，无"被丢弃候选的集合视图与共性解读" | gn_artifact 加 evidence 模式（失败分支 GN 状态/被否决 patch/忽略警告的考古查询）时销单 |
 | ~~W-12~~ | ~~owner-session 与无主工件防毒~~ | **已销单（2026-09-29）**：ExperienceEntry.owner 字段 + record_ai/record_override 自动落账（ai:ai-channel / user-override）+ recall 防毒过滤器（无主件不可召回）+ from_dict 迁移（存量 → legacy:pre-W12 有主）；test_experience [7c] 4 断言（54/54）。安全属性落地 |

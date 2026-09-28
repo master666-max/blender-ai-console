@@ -308,6 +308,12 @@ class Console:
         self.wal.append("compile", {"seg": name, "fingerprint": fp})
         self._specs[name] = spec
 
+        # W-7 接线（2026-09-29）：段交付 = 内容寻址 commit（m1_core A33）——
+        # 同参数+同输出自动去重；revert/set_param 后重编译产出新 hash。
+        # commits 是只增史册（Git 对象模型缩到段粒度），export_state 可读。
+        self.commits.commit(name, dict(self.vparams.get()),
+                            f"fp:{fp}", deps=deps)
+
         data = {"fingerprint": fp, "nodes": len(tree.nodes)}
         if rig_detail is not None:
             data["rig"] = {"metarig": rig_detail["metarig"], "rig": rig_detail["rig"],

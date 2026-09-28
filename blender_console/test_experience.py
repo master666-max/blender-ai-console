@@ -310,6 +310,27 @@ try:
     check("from_dict 迁移：owner 缺失 → legacy:pre-W12",
           lambda: old.owner, "legacy:pre-W12")
 
+    # ── [7d] W-9 存活率闭环（Orr 地位经济学：价值由流通度量）─────
+    print("\n[7d] W-9 存活率索引")
+    lib6 = ExperienceLibrary(tmp / "lib6.jsonl")
+    s1 = lib6.record_ai(trigger={"proj": "w9"}, attention="流通计数", story="s",
+                        evidence=EV)
+    check("未被讲述 → survival_rate=None（没有流通就没有存活率）",
+          lambda: lib6.survival_rate(s1) is None)
+    before = lib6.entries[s1].provenance.get("recall_hits", 0)
+    got6 = lib6.recall({"proj": "w9"}, include_draft=True)
+    after = lib6.entries[s1].provenance.get("recall_hits", 0)
+    check("recall 命中自动计数（recall_hits %s→%s）" % (before, after),
+          lambda: after == before + 1 and len(got6) >= 1)
+    lib6.mark_reuse(s1, success=True, had_variant=False)
+    rate = lib6.survival_rate(s1)
+    check("讲述 1 次+复用成功 → survival_rate=%.2f" % (rate or 0), lambda: rate == 1.0)
+    lib6.recall({"proj": "w9"}, include_draft=True)     # 第二次讲述 → hits=2
+    lib6.mark_reuse(s1, success=False, had_variant=False)
+    rate2 = lib6.survival_rate(s1)
+    check("再讲述+复用失败 → survival_rate=%.2f（如实反映）" % (rate2 or 0),
+          lambda: rate2 == 0.5)
+
     # ── 汇总 ────────────────────────────────────────────────────
     failed = [r for r in ROWS if not r["ok"]]
     print(f"\nM6 EXPERIENCE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
