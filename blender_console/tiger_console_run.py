@@ -48,7 +48,7 @@ from logic_tree import load_tree, to_plan
 lt = load_tree(HERE / 'logic_trees' / 'tiger_tank.json')
 lt_plan = to_plan(lt)
 lt_deps = {s2['id']: s2['depends_on'] for s2 in lt_plan['sections']}
-OP_MAP = {'armor_box': 'boolean_diff', 'wheel_row': 'array_radial',
+OP_MAP = {'armor_box': 'boolean_diff', 'wheel_row': 'cylinder',
           'track_loop': 'sweep_circle', 'grille': 'array_linear',
           'turret_shell': 'revolve_profile', 'gun_barrel': 'cylinder',
           'mg_port': 'cylinder', 'hatch_pair': 'cylinder', 'mantlet': 'boolean_union',
@@ -97,6 +97,43 @@ for _s in sec_map.values():
         _s['operand'] = {'op': 'cube',
                          'size': [at35(_L - 200), at35(_W - 200), at35(_H + 400)],
                          'location': [0, 0, at35(200)]}   # 内腔上穿（敞口车体）
+# ── M4-8 契约补齐：boolean_union operand / set_material material_plan / wheel_row 链 ──
+for _s in sec_map.values():
+    _nid = _s['id']
+    _tree_node = byid.get(_nid)
+    if not _tree_node:
+        continue
+    _top_op = _tree_node['build']['op']
+
+    if _s['op'] == 'boolean_union' and 'operand' not in _s:
+        # mantlet 等需要并集对象
+        _s['operand'] = {'op': 'cylinder',
+                         'parameters': [{'name': 'Diameter', 'type': 'FLOAT', 'value': at35(600)}]}
+    if _s['op'] == 'set_material' and 'material_plan' not in _s:
+        # 迷彩/旧化都需要材质
+        _s['material_plan'] = {'preset': 'metal', 'surface': {'roughness': 0.65}}
+    if _top_op == 'wheel_row' and 'operand' not in _s:
+        # 负重轮 ×8 交错排列（嵌套链，深度 8 ≤ 8 上限）
+        _chain = {'op': 'cylinder', 'radius': at35(400), 'depth': at35(60),
+                  'location': [at35(-1350), 0, at35(520)]}
+        for _i in range(1, 8):
+            _x = at35(-1350) + _i * (at35(2700) / 7)
+            _chain = {'op': 'cylinder', 'radius': at35(400), 'depth': at35(60),
+                      'location': [_x, 0, at35(520)], 'operand': _chain}
+        _s['operand'] = _chain
+
+# ── spec 清理：非 boolean 类 section 不得有 operand（schema 白名单）──
+_BOOLEAN_OPS = {"boolean_diff", "boolean_union", "boolean_intersect"}
+for _s in sec_map.values():
+    if _s.get("op") not in _BOOLEAN_OPS and "operand" in _s:
+        del _s["operand"]
+    if _s.get("op") != "set_material" and "material_plan" in _s:
+        del _s["material_plan"]
+# set_material 补 material_plan
+for _s in sec_map.values():
+    if _s.get("op") == "set_material" and "material_plan" not in _s:
+        _s["material_plan"] = {"preset": "metal", "surface": {"roughness": 0.65}}
+
 plan = {'version': '0.3', 'intent': sk['intent'], 'sections': list(sec_map.values()),
         'constraints': sk.get('constraints', [])}
 

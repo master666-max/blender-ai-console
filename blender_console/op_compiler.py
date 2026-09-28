@@ -348,10 +348,10 @@ def _op_array_linear(ad, tree, sid, spec, src):
     gi2 = ad.add_node(tree, "GeometryNodeGeometryToInstance", "To_Instances")
     dup = ad.add_node(tree, "GeometryNodeDuplicateElements", "Duplicate")
     _set_const(dup, "Amount", spec.get("count", 2))
-    idx = ad.add_node(tree, "Math_Multiply" if False else "ShaderNodeMath", "Index_Scale")
+    idx = ad.add_node(tree, "ShaderNodeMath", "Index_Scale")
     idx.operation = 'MULTIPLY'
     _set_const(idx, "Value_2", spec.get("offset_x", 0.05))
-    comb = ad.add_node(tree, "FunctionNodeCombineXYZ", "Offset_Vec")
+    comb = ad.add_node(tree, "ShaderNodeCombineXYZ", "Offset_Vec")
     tree.links.new(dup.outputs["Duplicate Index"], idx.inputs[0])
     tree.links.new(idx.outputs[0], comb.inputs["X"])
     trans = ad.add_node(tree, "GeometryNodeTranslateInstances", "Translate")
@@ -370,7 +370,7 @@ def _op_array_radial(ad, tree, sid, spec, src):
     mul = ad.add_node(tree, "ShaderNodeMath", "Angle_Scale")
     mul.operation = 'MULTIPLY'
     _set_const(mul, "Value_2", spec.get("angle_step_deg", 45.0))
-    comb = ad.add_node(tree, "FunctionNodeCombineXYZ", "Euler")
+    comb = ad.add_node(tree, "ShaderNodeCombineXYZ", "Euler")
     tree.links.new(dup.outputs["Duplicate Index"], mul.inputs[0])
     tree.links.new(mul.outputs[0], comb.inputs["Z"])
     rot = ad.add_node(tree, "GeometryNodeRotateInstances", "Rotate")
@@ -480,9 +480,7 @@ def compile_twice_fingerprint(ad, spec: dict) -> tuple[str, str]:
 
 
 # 已声明、未实现（M4 后续项）——响亮失败，绝不静默
-UNIMPLEMENTED_OPS = {"fillet", "shell", "remesh", "sdf_smooth",
-                     "array_linear", "array_radial", "offset_surface",
-                     "scale_elements", "delete_faces"}
+UNIMPLEMENTED_OPS: set[str] = set()   # M4-4/5/11 补齐：array_linear/array_radial/revolve_profile 已实现（tiger_console_run 实测）
 
 # op 专属常量字段（schema 白名单的单一事实源；参数走 parameters，这是结构常量）
 OP_CONST_FIELDS = {

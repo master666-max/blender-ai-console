@@ -1,150 +1,175 @@
 {
-  "schema": "mug-console-state/1.1",
-  "mode": "INCREMENTAL",
-  "steps": [
-    {
-      "id": "s1",
-      "seg": "S1_杯体",
-      "obj": "Mug",
-      "deps": [],
-      "thought_refs": [],
-      "params": {
-        "Body_Radius": 0.04,
-        "Body_Depth": 0.095
-      }
-    },
-    {
-      "id": "s2",
-      "seg": "S2_把手",
-      "obj": "Handle",
-      "deps": [
-        "s1"
-      ],
-      "thought_refs": [
-        "T1"
-      ],
-      "params": {
-        "Handle_Ring_Radius": 0.032,
-        "Handle_Thickness": 0.007
-      }
-    },
-    {
-      "id": "s3",
-      "seg": "S3_收尾",
-      "obj": "Mug",
-      "deps": [
-        "s2"
-      ],
-      "thought_refs": [
-        "T2"
-      ],
-      "params": {
-        "Subdiv_Level": 2
-      }
-    }
-  ],
-  "segments": {
-    "S1_杯体": {
-      "steps": [
-        "s1"
-      ],
-      "revision": 3,
-      "dirty": false,
-      "output_hash": "3f9c…a1"
-    },
-    "S2_把手": {
-      "steps": [
-        "s2"
-      ],
-      "revision": 5,
-      "dirty": false,
-      "output_hash": "8d11…7e"
-    },
-    "S3_收尾": {
-      "steps": [
-        "s3"
-      ],
-      "revision": 6,
-      "dirty": true,
-      "output_hash": ""
-    }
+ "schema": "mug-console-state/1.1",
+ "steps": [
+  {
+   "id": "step:1.1",
+   "seg": "1.1",
+   "obj": "tiger_root",
+   "deps": [],
+   "thought_refs": [],
+   "params": {
+    "L": 180.57,
+    "W": 105.86,
+    "H": 85.71
+   }
   },
-  "revisions": {
-    "S1_杯体": {
-      "param_fp": "b21c",
-      "output_hash": "3f9c…a1",
-      "revision": 3,
-      "dirty": false
-    },
-    "S2_把手": {
-      "param_fp": "77aa",
-      "output_hash": "8d11…7e",
-      "revision": 5,
-      "dirty": false
-    },
-    "S3_收尾": {
-      "param_fp": "c0de",
-      "output_hash": "",
-      "revision": 6,
-      "dirty": true
-    }
+  {
+   "id": "step:2.1",
+   "seg": "2.1",
+   "obj": "tiger_root",
+   "deps": [
+    "step:1.1"
+   ],
+   "thought_refs": [],
+   "params": {
+    "ring_dia": 52.86,
+    "width": 59.43
+   }
   },
-  "params": {
-    "Body_Radius": 0.04,
-    "Body_Depth": 0.095,
-    "Handle_Ring_Radius": 0.032,
-    "Handle_Thickness": 0.007,
-    "Subdiv_Level": 2
+  {
+   "id": "step:2.2",
+   "seg": "2.2",
+   "obj": "tiger_root",
+   "deps": [
+    "step:2.1"
+   ],
+   "thought_refs": [],
+   "params": {
+    "caliber": 2.51,
+    "barrel_len": 140.86,
+    "exposed_at35": 4.03
+   }
   },
-  "commits": {
-    "S1_杯体": "c0a1f3",
-    "S2_把手": "cf229b",
-    "S3_收尾": "c9d3e0"
-  },
-  "goodpoints": [
-    {
-      "name": "GP1",
-      "step_id": "s3",
-      "thought_refs": [
-        "T1",
-        "T2"
-      ],
-      "note": "初始版通过（把手 7mm）"
-    }
-  ],
-  "thoughts": [
-    {
-      "id": "T1",
-      "claim": "把手粗 7mm 握感舒适",
-      "kind": "assumption",
-      "status": "ACTIVE"
-    },
-    {
-      "id": "T2",
-      "claim": "细分 2 级足够圆滑",
-      "kind": "decision",
-      "status": "ACTIVE"
-    }
-  ],
-  "kpis": {
-    "override_rate": 0.3333,
-    "overrides": 1,
-    "ab_decisions": 3,
-    "dirty_segments": 1,
-    "verify_fails": 1,
-    "override_curve": [
-      {
-        "n": 1,
-        "rate": 0.0
-      },
-      {
-        "n": 2,
-        "rate": 0.0
-      },
-      {
-        "n": 3,
-        "rate": 0.3333
-      }
+  {
+   "id": "step:2.3",
+   "seg": "2.3",
+   "obj": "tiger_root",
+   "deps": [
+    "step:2.2"
+   ],
+   "thought_refs": [],
+   "params": {
+    "dia": 0.17,
+    "pos_norm": [
+     0.02,
+     0.01
     ]
+   }
+  },
+  {
+   "id": "step:2.4",
+   "seg": "2.4",
+   "obj": "tiger_root",
+   "deps": [
+    "step:2.3"
+   ],
+   "thought_refs": [],
+   "params": {
+    "pos_norm_x": [
+     0.01,
+     0.02
+    ],
+    "z": "turret_top"
+   }
+  },
+  {
+   "id": "step:1.5",
+   "seg": "1.5",
+   "obj": "tiger_root",
+   "deps": [
+    "step:2.4"
+   ],
+   "thought_refs": [],
+   "params": {
+    "dia": 4.29,
+    "len": 25.71
+   }
   }
+ ],
+ "segments": {
+  "1.1": {
+   "steps": [
+    "step:1.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "2.1": {
+   "steps": [
+    "step:2.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "2.2": {
+   "steps": [
+    "step:2.2"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "2.3": {
+   "steps": [
+    "step:2.3"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "2.4": {
+   "steps": [
+    "step:2.4"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "1.5": {
+   "steps": [
+    "step:1.5"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  }
+ },
+ "revisions": {},
+ "mode": "INCREMENTAL",
+ "params": {
+  "1.1.L": 180.57,
+  "1.1.W": 105.86,
+  "1.1.H": 85.71,
+  "2.1.ring_dia": 52.86,
+  "2.1.width": 59.43,
+  "2.2.caliber": 2.51,
+  "2.2.barrel_len": 140.86,
+  "2.2.exposed_at35": 4.03,
+  "2.3.dia": 0.17,
+  "2.3.pos_norm": [
+   0.02,
+   0.01
+  ],
+  "2.4.pos_norm_x": [
+   0.01,
+   0.02
+  ],
+  "2.4.z": "turret_top",
+  "1.5.dia": 4.29,
+  "1.5.len": 25.71
+ },
+ "commits": {
+  "1.1": null,
+  "2.1": null,
+  "2.2": null,
+  "2.3": null,
+  "2.4": null,
+  "1.5": null
+ },
+ "goodpoints": [],
+ "kpis": {
+  "override_rate": 0.0
+ }
 }
