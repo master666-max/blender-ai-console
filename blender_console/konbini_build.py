@@ -1,25 +1,24 @@
-"""konbini_build.py — 雨夜便利店街角微缩场景（三渲二/二次元/可交互 GLTF）
+"""konbini_build.py v2 — 雨夜便利店街角微缩（推倒重做）
 ================================================================================
-构图：2.4×2.4m 方形底座；便利店居后部中央，门朝南（-Y）；
-      L 形人行道 + 前部车道 + 斑马线；左暗巷；右 vending 机群。
-命名约定（three.js 动效匹配）：
-  MAT_SignGlow / MAT_Lightbox / MAT_VendA / MAT_VendB  → 霓虹闪烁
-  OBJ_DoorL / OBJ_DoorR                                 → 自动门滑动
-  MAT_Glass                                             → 雨水滑落目标
-  MAT_Wet*                                              → 湿反光
-运行：blender --background --python konbini_build.py  → export GLTF
+v1 教训（用户裁决："全他妈是混乱的方块"）：
+  * 258 个无倒角 primitives 平铺 = 方块堆，不是微缩模型
+  * 五颜六色的商品盒 = 噪声，不是氛围
+  * 元素撒满底座 = 没有构图
+v2 三原则：
+  1. 减件聚焦：~110 件，每件有存在理由；商品只做"发光色带暗示"不逐个建模
+  2. 全量倒角：BEVEL 0.012×2 段——圆润感 = 微缩模型感的第一来源
+  3. 色彩克制：夜蓝基调 + 三个光焦点（店内暖橙/招牌品红/街灯钠黄）
+运行：blender --background --python konbini_build.py [--python-expr 渲染]
 """
 import bpy, math, random
-import json as _json
 from pathlib import Path
 
-random.seed(42)
-# ── 清场 ────────────────────────────────────────────────────
+random.seed(7)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 S = bpy.context.scene
 
 # ── helpers ─────────────────────────────────────────────────
-def mat(name, color, rough=0.6, metal=0.0, emit=None, emit_str=1.0, alpha=1.0):
+def mat(name, color, rough=0.6, metal=0.0, emit=None, es=0.0, alpha=1.0):
     m = bpy.data.materials.get(name)
     if m:
         return m
@@ -31,288 +30,228 @@ def mat(name, color, rough=0.6, metal=0.0, emit=None, emit_str=1.0, alpha=1.0):
     b.inputs["Metallic"].default_value = metal
     if emit:
         b.inputs["Emission Color"].default_value = (*emit, 1.0)
-        b.inputs["Emission Strength"].default_value = emit_str
+        b.inputs["Emission Strength"].default_value = es
     if alpha < 1.0:
         b.inputs["Alpha"].default_value = alpha
         m.blend_method = 'BLEND'
     return m
 
-def box(name, size, loc, m, rot=(0, 0, 0)):
+def bev(o, w=0.012, seg=2):
+    md = o.modifiers.new("bev", 'BEVEL')
+    md.width = w; md.segments = seg
+    return o
+
+def box(name, size, loc, m, rot=(0, 0, 0), bevel=0.012):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
     o = bpy.context.active_object
     o.name = name
-    o.scale = (size[0] / 2, size[1] / 2, size[2] / 2)
+    o.scale = (size[0]/2, size[1]/2, size[2]/2)
     o.data.materials.append(m)
+    if bevel:
+        bev(o, bevel)
     return o
 
-def cyl(name, r, depth, loc, m, rot=(0, 0, 0), verts=16):
+def cyl(name, r, depth, loc, m, rot=(0, 0, 0), verts=20, bevel=0.006):
     bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=depth, location=loc,
                                         rotation=rot, vertices=verts)
     o = bpy.context.active_object
     o.name = name
     o.data.materials.append(m)
+    if bevel:
+        bev(o, bevel)
     return o
 
 def plane(name, sx, sy, loc, m, rot=(0, 0, 0)):
     bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=rot)
     o = bpy.context.active_object
     o.name = name
-    o.scale = (sx / 2, sy / 2, 1)
+    o.scale = (sx/2, sy/2, 1)
     o.data.materials.append(m)
     return o
 
-# ── 材质表 ──────────────────────────────────────────────────
-M_BASE   = mat("MAT_Base", (0.23, 0.24, 0.27), 0.45)
-M_ROAD   = mat("MAT_Road", (0.14, 0.15, 0.18), 0.30, 0.30)
-M_WET    = mat("MAT_Wet1", (0.04, 0.06, 0.09), 0.08, 0.55)
-M_SIDE   = mat("MAT_Sidewalk", (0.48, 0.50, 0.54), 0.85)
-M_WALL   = mat("MAT_Wall", (0.88, 0.86, 0.80), 0.7)
-M_WALL2  = mat("MAT_Wall2", (0.75, 0.76, 0.78), 0.7)
-M_GLASS  = mat("MAT_Glass", (0.55, 0.75, 0.85), 0.05, 0.0, alpha=0.35)
-M_FRAME  = mat("MAT_Frame", (0.15, 0.17, 0.20), 0.5, 0.3)
-M_FLOOR  = mat("MAT_FloorIn", (0.92, 0.90, 0.85), 0.6)
-M_SHelf  = mat("MAT_Shelf", (0.90, 0.91, 0.93), 0.4, 0.1)
-M_WARM   = mat("MAT_WarmGlow", (1, 1, 1), 0.4, emit=(1.0, 0.75, 0.42), emit_str=3.0)
-M_SIGN   = mat("MAT_SignGlow", (1, 1, 1), 0.4, emit=(1.0, 0.45, 0.12), emit_str=4.0)   # 招牌橙
-M_SIGNB  = mat("MAT_SignGlowB", (1, 1, 1), 0.4, emit=(0.25, 0.85, 1.0), emit_str=3.5)  # 青
-M_LIGHTB = mat("MAT_Lightbox", (1, 1, 1), 0.4, emit=(1.0, 0.9, 0.75), emit_str=3.0)
-M_VENDA  = mat("MAT_VendA", (1, 1, 1), 0.35, emit=(1.0, 0.25, 0.30), emit_str=2.6)     # 红贩卖机
-M_VENDB  = mat("MAT_VendB", (1, 1, 1), 0.35, emit=(0.20, 0.45, 1.0), emit_str=2.6)     # 蓝
-M_DARK   = mat("MAT_Dark", (0.10, 0.10, 0.12), 0.7)
-M_POLE   = mat("MAT_Pole", (0.35, 0.38, 0.42), 0.5, 0.4)
-M_METAL  = mat("MAT_Metal", (0.55, 0.58, 0.62), 0.35, 0.6)
-M_RUBBER = mat("MAT_Rubber", (0.06, 0.06, 0.07), 0.9)
-M_UMB    = mat("MAT_Umbrella", (0.85, 0.30, 0.35), 0.5)
-M_ZEBRA  = mat("MAT_Zebra", (0.80, 0.82, 0.85), 0.3, 0.2)
-M_GREEN  = mat("MAT_Green", (0.20, 0.45, 0.25), 0.8)
-M_DOOR   = mat("MAT_DoorAuto", (0.60, 0.78, 0.85), 0.05, alpha=0.45)
-M_POSTER = [mat(f"MAT_Poster{i}", c, 0.5, emit=c, emit_str=0.6)
-            for i, c in enumerate([(0.9, 0.5, 0.3), (0.4, 0.7, 0.9),
-                                   (0.9, 0.8, 0.4), (0.7, 0.5, 0.9)])]
-M_PROD   = [mat(f"MAT_Prod{i}", c, 0.5) for i, c in enumerate(
-    [(0.9, 0.35, 0.3), (0.3, 0.6, 0.9), (0.95, 0.8, 0.35), (0.4, 0.8, 0.5),
-     (0.8, 0.4, 0.8), (0.95, 0.55, 0.2), (0.5, 0.85, 0.9), (0.9, 0.9, 0.6)])]
-M_TL_R   = mat("MAT_TL_Red", (1, 1, 1), 0.3, emit=(1.0, 0.15, 0.15), emit_str=2.5)
-M_TL_G   = mat("MAT_TL_Green", (1, 1, 1), 0.3, emit=(0.15, 1.0, 0.35), emit_str=2.5)
-M_TL_OFF = mat("MAT_TL_Off", (0.12, 0.12, 0.14), 0.5)
+# ── 材质（收敛 18 种）───────────────────────────────────────
+M_BASE  = mat("MAT_Base",   (0.22, 0.23, 0.26), 0.45)
+M_ROAD  = mat("MAT_Road",   (0.13, 0.14, 0.17), 0.28, 0.32)
+M_WET   = mat("MAT_Wet",    (0.06, 0.08, 0.12), 0.05, 0.70)
+M_SIDE  = mat("MAT_Side",   (0.46, 0.48, 0.52), 0.85)
+M_CURB  = mat("MAT_Curb",   (0.56, 0.58, 0.61), 0.8)
+M_WALL  = mat("MAT_Wall",   (0.62, 0.66, 0.72), 0.65)
+M_TRIM  = mat("MAT_Trim",   (0.20, 0.22, 0.26), 0.5, 0.3)
+M_GLASS = mat("MAT_Glass",  (0.60, 0.78, 0.88), 0.04, alpha=0.30)
+M_DOOR  = mat("MAT_Door",   (0.62, 0.80, 0.88), 0.04, alpha=0.40)
+M_FLOOR = mat("MAT_Floor",  (0.93, 0.90, 0.83), 0.6)
+M_WHITE = mat("MAT_White",  (0.92, 0.92, 0.94), 0.45)
+M_DARK  = mat("MAT_Dark",   (0.09, 0.09, 0.11), 0.7)
+M_POLE  = mat("MAT_Pole",   (0.30, 0.33, 0.37), 0.45, 0.5)
+M_METAL = mat("MAT_Metal",  (0.60, 0.63, 0.66), 0.3, 0.7)
+M_WARM  = mat("MAT_Warm",   (1, 1, 1), 0.4, emit=(1.0, 0.72, 0.38), es=2.6)
+M_SIGN  = mat("MAT_Sign",   (1, 1, 1), 0.4, emit=(1.0, 0.32, 0.48), es=2.4)   # 品红主招
+M_SIGN2 = mat("MAT_Sign2",  (1, 1, 1), 0.4, emit=(0.35, 0.85, 1.0), es=2.2)   # 青
+M_VEND  = mat("MAT_Vend",   (1, 1, 1), 0.35, emit=(0.95, 0.55, 0.15), es=2.0)  # 钠橙
+M_BAND  = mat("MAT_Band",   (1, 1, 1), 0.4, emit=(0.95, 0.78, 0.52), es=1.4)   # 商品带
+M_ZEBRA = mat("MAT_Zebra",  (0.75, 0.78, 0.82), 0.3, 0.2)
+M_UMB   = mat("MAT_Umb",    (0.80, 0.28, 0.34), 0.5)
+M_GRN   = mat("MAT_GRN",    (0.16, 0.34, 0.22), 0.8)
 
 # ── 底座 ────────────────────────────────────────────────────
-box("Base", (2.4, 2.4, 0.12), (0, 0, -0.06), M_BASE)
+box("Base", (2.4, 2.4, 0.15), (0, 0, -0.075), M_BASE, bevel=0.02)
 
 # ── 道路系统 ────────────────────────────────────────────────
-# 车道（前部横贯）
-plane("Road", 2.4, 0.92, (0, -0.74, 0.001), M_ROAD)
-# 人行道（L 形：店前 + 右侧转角）
-plane("SidewalkF", 2.4, 0.44, (0, -0.06, 0.015), M_SIDE)
-plane("SidewalkR", 0.42, 0.44, (0.99, -0.28, 0.015), M_SIDE)
-# 路缘
-box("CurbF", (2.4, 0.03, 0.035), (0, -0.285, 0.017), M_SIDE)
-# 排水沟（人行道内缘缝）
-box("Drain", (2.3, 0.05, 0.01), (0, -0.26, 0.0175), M_DARK)
-# 斑马线（车道上，反光白条）
-for i in range(6):
-    plane(f"Zebra{i}", 0.09, 0.55, (-0.62 + i * 0.22, -0.74, 0.003), M_ZEBRA)
-# 车道中线
-plane("CenterLine", 2.3, 0.03, (0, -0.74, 0.003), M_ZEBRA)
-# 停车位线（右段车道）
-for i in range(2):
-    plane(f"ParkLine{i}", 0.02, 0.4, (0.72 + i * 0.45, -0.85, 0.003), M_ZEBRA)
-# 积水路面（车道反光斑）
-plane("Wet1", 0.7, 0.35, (-0.55, -0.85, 0.004), M_WET)
-plane("Wet2", 0.5, 0.3, (0.35, -0.60, 0.004), M_WET)
-plane("Wet3", 0.4, 0.25, (0.75, -0.95, 0.004), M_WET)
+plane("Road", 2.4, 0.86, (0, -0.77, 0.002), M_ROAD)
+plane("WetA", 0.95, 0.34, (-0.45, -0.82, 0.004), M_WET)
+plane("WetB", 0.62, 0.28, (0.55, -0.62, 0.004), M_WET)
+plane("Walk", 2.4, 0.40, (0, -0.14, 0.014), M_SIDE)
+box("Curb", (2.4, 0.035, 0.04), (0, -0.335, 0.02), M_CURB)
+box("Drain", (2.2, 0.045, 0.008), (0, -0.31, 0.033), M_DARK)
+for i in range(5):
+    plane(f"Z{i}", 0.10, 0.52, (-0.70 + i*0.26, -0.77, 0.004), M_ZEBRA)
+plane("Cline", 2.3, 0.028, (0, -0.77, 0.004), M_ZEBRA)
+plane("WetZ", 0.85, 0.5, (-0.35, -0.77, 0.005), M_WET)
 
 # ── 便利店主体 ──────────────────────────────────────────────
-BX, BY = -0.05, 0.62           # 建筑中心
-BW, BD, BH = 1.7, 1.05, 2.05   # 宽/深/高
-box("Body", (BW, BD, BH), (BX, BY, BH / 2), M_WALL)
-box("RoofBand", (BW + 0.06, BD + 0.06, 0.08), (BX, BY, BH + 0.04), M_WALL2)
-box("RoofTop", (BW, BD, 0.02), (BX, BY, BH + 0.09), M_DARK)
-# 店内地板
-plane("FloorIn", BW - 0.1, BD - 0.12, (BX, BY + 0.02, 0.012), M_FLOOR)
-# 橱窗大玻璃（正面 + 右侧）
-box("GlassFront", (1.25, 0.02, 1.15), (BX - 0.12, BY - BD / 2 - 0.005, 1.12), M_GLASS)
-box("GlassSide", (0.02, 0.62, 1.15), (BX + BW / 2 + 0.005, BY - 0.18, 1.12), M_GLASS)
-# 橱窗框
-box("FrameF1", (1.3, 0.03, 0.05), (BX - 0.12, BY - BD / 2, 1.72), M_FRAME)
-box("FrameF2", (1.3, 0.03, 0.05), (BX - 0.12, BY - BD / 2, 0.52), M_FRAME)
-box("FrameV", (0.04, 0.035, 1.22), (BX - 0.73, BY - BD / 2, 1.12), M_FRAME)
-# 自动门（双滑，正面中央）——命名给 three.js 动效
-box("OBJ_DoorL", (0.36, 0.025, 1.16), (-0.15, BY - BD / 2 - 0.01, 1.11), M_DOOR)
-box("OBJ_DoorR", (0.36, 0.025, 1.16), (0.22, BY - BD / 2 - 0.01, 1.11), M_DOOR)
-box("DoorFrame", (0.82, 0.04, 0.06), (0.035, BY - BD / 2, 1.73), M_FRAME)
-# 屋檐雨棚（正面 + 右侧挑出）
-box("AwningF", (BW + 0.35, 0.34, 0.05), (BX, BY - BD / 2 - 0.15, 1.80), M_WALL2)
-box("AwningR", (0.30, BD - 0.3, 0.05), (BX + BW / 2 + 0.13, BY + 0.05, 1.80), M_WALL2)
-# 招牌（屋顶发光灯箱，橙）+ 副招牌（青）
-box("MAT_SignGlow", (1.5, 0.14, 0.30), (BX, BY + 0.02, 2.28), M_SIGN)
-box("SignSub", (0.6, 0.06, 0.12), (BX - 0.95, BY - 0.35, 2.05), M_SIGNB)
-# 门口立式招牌
-cyl("SignPole", 0.015, 1.1, (0.62, -0.28, 0.58), M_POLE)
-box("SignStand", (0.34, 0.06, 0.42), (0.62, -0.28, 1.28), M_SIGN)
-# 门口地垫
-box("DoorMat", (0.75, 0.35, 0.012), (0.035, BY - BD / 2 - 0.22, 0.032), M_DARK)
+BX, BY = -0.02, 0.62
+BW, BD, BH = 2.0, 0.98, 1.95
+box("Body", (BW, BD, BH), (BX, BY, BH/2), M_WALL)
+box("Cornice", (BW+0.05, BD+0.05, 0.06), (BX, BY, BH+0.03), M_TRIM)
+plane("FloorIn", BW-0.12, BD-0.14, (BX, BY, 0.012), M_FLOOR)
+FX = BY - BD/2 - 0.005
+box("GlassL", (1.06, 0.02, 1.12), (BX-0.52, FX, 1.06), M_GLASS)
+box("GlassR", (0.02, 0.55, 1.12), (BX+0.94, FX-0.02, 1.06), M_GLASS)
+box("FrT", (1.16, 0.035, 0.05), (BX-0.52, FX+0.01, 1.66), M_TRIM)
+box("FrB", (1.16, 0.035, 0.05), (BX-0.52, FX+0.01, 0.47), M_TRIM)
+box("WallR", (0.30, 0.02, 1.35), (BX+0.85, FX, 0.72), M_WALL)
+box("OBJ_DoorL", (0.26, 0.022, 1.14), (-0.14, FX-0.01, 1.06), M_DOOR)
+box("OBJ_DoorR", (0.26, 0.022, 1.14), (0.13, FX-0.01, 1.06), M_DOOR)
+box("DFr", (0.60, 0.04, 0.05), (0.0, FX, 1.665), M_TRIM)
+box("Awning", (BW+0.36, 0.36, 0.045), (BX, BY-BD/2-0.16, 1.78), M_TRIM)
+box("AwningE", (BW+0.36, 0.02, 0.075), (BX, BY-BD/2-0.33, 1.77), M_WARM)
+box("MAT_Sign", (1.55, 0.13, 0.30), (BX, BY+0.03, 2.22), M_SIGN)
+box("MAT_Sign2", (0.52, 0.05, 0.11), (BX-0.72, BY-0.32, 1.96), M_SIGN2)
+cyl("SPole", 0.016, 1.15, (0.86, -0.30, 0.60), M_POLE)
+box("MAT_Vend", (0.30, 0.05, 0.40), (0.86, -0.30, 1.32), M_VEND)
+box("Mat", (0.68, 0.32, 0.012), (0.0, FX-0.20, 0.03), M_DARK)
 
-# ── 店内陈设（暖光内藏）────────────────────────────────────
-# 天花灯箱 ×2
-box("MAT_Lightbox", (0.55, 0.4, 0.03), (BX - 0.45, BY + 0.1, 1.92), M_LIGHTB)
-box("MAT_Lightbox", (0.55, 0.4, 0.03), (BX + 0.4, BY + 0.1, 1.92), M_LIGHTB)
-# 货架 ×3（白架 + 商品阵列）
-for r, gy in enumerate([0.38, 0.62, 0.86]):
-    gx = BX - 0.42
-    box(f"Shelf{r}", (0.85, 0.24, 0.06), (gx, gy, 0.35), M_SHelf)
-    box(f"ShelfBk{r}", (0.85, 0.02, 0.75), (gx, gy + 0.11, 0.68), M_SHelf)
-    for lv, z in enumerate([0.42, 0.62, 0.82, 1.02]):
-        for i in range(9):
-            m = random.choice(M_PROD)
-            box(f"Prod{r}_{lv}_{i}", (0.055, 0.10, 0.14),
-                (gx - 0.38 + i * 0.092, gy - 0.04, z), m)
-# 饮料柜（后墙发光横柜 + 彩瓶）
-box("DrinkCase", (0.95, 0.18, 1.5), (BX - 0.35, BY + 0.42, 0.78), M_SHelf)
-box("MAT_Lightbox", (0.85, 0.02, 1.1), (BX - 0.35, BY + 0.325, 0.80), M_LIGHTB)
-for i in range(12):
-    m = random.choice(M_PROD)
-    cyl(f"Drink{i}", 0.018, 0.10, (BX - 0.70 + i * 0.062, BY + 0.33, 0.55 + (i % 3) * 0.30), m,
-        rot=(math.pi / 2, 0, 0), verts=10)
-# 便当/饭团冷柜（左墙横排）
-box("BentoCase", (0.18, 0.55, 0.9), (BX - 0.78, BY - 0.05, 0.48), M_SHelf)
-for i in range(8):
-    box(f"Bento{i}", (0.10, 0.11, 0.05), (BX - 0.78, BY - 0.27 + i * 0.062,
-        0.30 + (i % 4) * 0.17), random.choice(M_PROD))
-# 收银台（右前）+ 咖啡机 + 收银屏
-box("Counter", (0.55, 0.30, 0.42), (BX + 0.55, BY - 0.30, 0.24), M_WALL2)
-box("CounterTop", (0.60, 0.34, 0.03), (BX + 0.55, BY - 0.30, 0.465), M_DARK)
-box("Coffee", (0.10, 0.12, 0.24), (BX + 0.44, BY - 0.30, 0.60), M_DARK)
-box("CashScreen", (0.10, 0.04, 0.12), (BX + 0.66, BY - 0.26, 0.58), M_DARK)
-box("MAT_Lightbox", (0.06, 0.05, 0.03), (BX + 0.62, BY - 0.30, 0.53), M_LIGHTB)
-# 关东煮柜台（收银台左）
-cyl("Oden", 0.07, 0.14, (BX + 0.22, BY - 0.30, 0.54), M_METAL, verts=12)
-for i in range(5):
-    box(f"Oden{i}", (0.035, 0.035, 0.05), (BX + 0.19 + (i % 3) * 0.03,
-        BY - 0.32 + (i // 3) * 0.04, 0.63), M_PROD[i])
-# 杂志架（左前墙边）
-box("MagRack", (0.06, 0.5, 0.6), (BX - 0.80, BY - 0.42, 0.35), M_SHelf)
-for i in range(6):
-    box(f"Mag{i}", (0.015, 0.09, 0.13), (BX - 0.765, BY - 0.62 + i * 0.085,
-        0.28 + (i % 3) * 0.17), random.choice(M_PROD))
-# 店内海报（橱窗内侧贴）
-for i, (px, pz) in enumerate([(-0.55, 1.35), (-0.30, 1.35), (0.55, 1.40)]):
-    box(f"Poster{i}", (0.16, 0.008, 0.22), (px, BY - BD / 2 + 0.015, pz),
-        random.choice(M_POSTER))
-# 后场门（右后墙白门）
-box("BackDoor", (0.02, 0.34, 1.0), (BX + BW / 2 - 0.01, BY + 0.28, 0.55), M_FLOOR)
-# 店内暖光（three.js 也可加；Blender 侧给 GLTF emissive 就够——不放灯避免导出复杂）
+# ── 店内 ────────────────────────────────────────────────────
+box("MAT_Warm", (0.62, 0.10, 0.025), (BX-0.5, BY+0.05, 1.86), M_WARM)
+box("MAT_Warm", (0.62, 0.10, 0.025), (BX+0.42, BY+0.05, 1.86), M_WARM)
+box("DCase", (1.0, 0.16, 1.35), (BX-0.35, BY+0.40, 0.72), M_WHITE)
+box("MAT_Warm", (0.9, 0.02, 1.05), (BX-0.35, BY+0.31, 0.74), M_WARM)
+for i in range(10):
+    box(f"Btl{i}", (0.045, 0.06, 0.13), (BX-0.72+i*0.082, BY+0.30,
+        0.42 + (i % 3)*0.30), [M_VEND, M_SIGN2, M_ZEBRA, M_UMB][i % 4])
+for r, gy in enumerate([0.34, 0.60]):
+    box(f"Shelf{r}", (0.80, 0.22, 0.05), (BX-0.45, gy, 0.42), M_WHITE)
+    box(f"ShelfB{r}", (0.80, 0.02, 0.62), (BX-0.45, gy+0.10, 0.72), M_WHITE)
+    box("MAT_Band", (0.72, 0.05, 0.10), (BX-0.45, gy-0.06, 0.60), M_BAND)
+    box("MAT_Band", (0.72, 0.05, 0.10), (BX-0.45, gy-0.06, 0.86), M_BAND)
+box("Bento", (0.16, 0.5, 0.85), (BX-0.90, BY-0.10, 0.46), M_WHITE)
+box("MAT_Band", (0.04, 0.4, 0.08), (BX-0.80, BY-0.10, 0.55), M_BAND)
+box("Cnt", (0.52, 0.28, 0.40), (BX+0.62, BY-0.28, 0.23), M_WALL)
+box("CntT", (0.56, 0.32, 0.025), (BX+0.62, BY-0.28, 0.45), M_TRIM)
+box("Cof", (0.09, 0.11, 0.22), (BX+0.52, BY-0.28, 0.57), M_DARK)
+cyl("Oden", 0.065, 0.13, (BX+0.30, BY-0.28, 0.53), M_METAL, verts=14)
+box("MAT_Band", (0.08, 0.08, 0.04), (BX+0.30, BY-0.28, 0.62), M_WARM)
+box("Mag", (0.05, 0.44, 0.55), (BX-0.94, BY-0.42, 0.33), M_WHITE)
+box("MAT_Band", (0.02, 0.36, 0.07), (BX-0.905, BY-0.42, 0.45), M_BAND)
+box("Pst1", (0.15, 0.006, 0.20), (BX-0.62, FX+0.015, 1.32), M_VEND)
+box("Pst2", (0.15, 0.006, 0.20), (BX-0.40, FX+0.015, 1.32), M_SIGN2)
+box("BDoor", (0.02, 0.32, 0.95), (BX+BW/2-0.012, BY+0.25, 0.52), M_FLOOR)
 
-# ── 街角元素 ────────────────────────────────────────────────
-# 自动贩卖机 ×2（右侧墙外，红/蓝发光正面）
-for i, (vx, vm) in enumerate([(0.97, M_VENDA), (1.13, M_VENDB)]):
-    box(f"MAT_Vend{'AB'[i]}", (0.13, 0.42, 0.95), (vx, 0.10, 0.51),
-        mat(f"MAT_VendBody{'AB'[i]}", (0.12, 0.12, 0.14), 0.5))
-    box(f"VendFace{'AB'[i]}", (0.012, 0.34, 0.72), (vx - 0.071, 0.10, 0.56), vm)
-    box(f"VendTop{'AB'[i]}", (0.05, 0.40, 0.06), (vx, 0.10, 1.01), M_DARK)
-# 自行车 ×2（人行道右段）
-for i, bx in enumerate([(0.62, -0.20), (0.80, -0.16)]):
-    ox, oy = bx
-    for dx in (-0.14, 0.14):
-        cyl(f"BikeWheel{i}_{dx}", 0.085, 0.015, (ox + dx, oy, 0.085), M_RUBBER,
-            rot=(0, math.pi / 2, 0), verts=12)
-    box(f"BikeFrame{i}", (0.26, 0.015, 0.02), (ox, oy, 0.13), M_METAL, rot=(0, 0, 0.12))
-    box(f"BikeBar{i}", (0.02, 0.22, 0.02), (ox + 0.16, oy, 0.20), M_METAL)
-    box(f"BikeSeat{i}", (0.06, 0.02, 0.02), (ox - 0.08, oy, 0.19), M_DARK)
-# 雨伞架（自动门旁，桶+伞）
-cyl("UmbStand", 0.035, 0.24, (-0.42, -0.24, 0.13), M_METAL, verts=10)
-for i in range(4):
-    cyl(f"Umb{i}", 0.008, 0.42, (-0.425 + i * 0.012, -0.235 + i * 0.01, 0.30),
-        [M_UMB, M_METAL, M_PROD[2], M_PROD[4]][i], rot=(0.06, 0.05, 0), verts=8)
-# 垃圾桶（贩卖机旁）
-cyl("Trash", 0.075, 0.42, (1.06, -0.20, 0.22), M_GREEN, verts=12)
-cyl("TrashLid", 0.082, 0.02, (1.06, -0.20, 0.44), M_DARK, verts=12)
-# 路灯 ×2（对面车道边 + 右角）
-for i, (lx, ly) in enumerate([(-1.06, -1.05), (1.10, -1.05)]):
-    cyl(f"LampPole{i}", 0.022, 1.55, (lx, ly, 0.78), M_POLE, verts=10)
-    box(f"LampArm{i}", (0.22 * (1 if i else -1), 0.02, 0.02), (lx + 0.10 * (1 if i else -1), ly, 1.54), M_POLE)
-    box(f"LampHead{i}", (0.10, 0.05, 0.03), (lx + 0.20 * (1 if i else -1), ly, 1.52), M_WARM)
-# 电线杆 ×2 + 电线（对面）
-for i, px in enumerate([-1.10, 1.06]):
-    cyl(f"Pole{i}", 0.028, 1.7, (px, -1.06, 0.85), M_WALL2, verts=10)
-    box(f"PoleCross{i}", (0.30, 0.02, 0.02), (px, -1.06, 1.62), M_WALL2)
-# 电线（悬链线近似：多段小盒）
-for seg_i in range(8):
-    t0, t1 = seg_i / 8, (seg_i + 1) / 8
-    x0, x1 = -0.95 + (0.55 - (-0.95)) * t0, -0.95 + (0.55 - (-0.95)) * t1
-    xm = (x0 + x1) / 2
-    sag = 0.06 * math.sin(math.pi * (t0 + t1) / 2)
-    box(f"Wire{seg_i}", (math.dist((x0, 0), (x1, 0)), 0.006, 0.006),
-        (xm, -1.06, 1.60 - sag), M_DARK, rot=(0, 0, 0))
-# 路牌（对面杆上）
-box("RoadSign", (0.18, 0.01, 0.10), (0.55, -1.03, 1.38), M_ZEBRA)
-box("RoadSignBar", (0.02, 0.01, 0.08), (0.55, -1.06, 1.32), M_POLE)
-# 交通信号灯（对面车道，红灯微变——three.js 动效）
-box("TLBox", (0.07, 0.06, 0.20), (0.62, -1.12, 1.30), M_DARK)
-box("OBJ_TL_Red", (0.045, 0.012, 0.045), (0.62, -1.088, 1.355), M_TL_R)
-box("OBJ_TL_Green", (0.045, 0.012, 0.045), (0.62, -1.088, 1.245), M_TL_OFF)
-# 街角护栏（右缘）
-for i in range(5):
-    cyl(f"RailP{i}", 0.008, 0.30, (1.18, -0.05 - i * 0.13, 0.17), M_METAL, verts=8)
-box("RailBar1", (0.012, 0.60, 0.015), (1.18, -0.31, 0.30), M_METAL)
-box("RailBar2", (0.012, 0.60, 0.015), (1.18, -0.31, 0.17), M_METAL)
-# 公告栏（小巷墙上）
-box("Board", (0.015, 0.42, 0.34), (BX - BW / 2 - 0.008, BY - 0.55, 1.25), M_WALL2)
+# ── 街角 ────────────────────────────────────────────────────
+for i, (vx, vm) in enumerate([(1.02, M_SIGN2), (1.16, M_VEND)]):
+    box(f"VBody{i}", (0.13, 0.40, 0.92), (vx, 0.05, 0.50), M_DARK)
+    box("MAT_Vend", (0.012, 0.32, 0.66), (vx-0.07, 0.05, 0.55), vm)
+    box(f"VTop{i}", (0.04, 0.38, 0.05), (vx, 0.05, 0.985), M_DARK)
+cyl("UmbSt", 0.032, 0.22, (-0.48, -0.26, 0.13), M_POLE, verts=12)
 for i in range(3):
-    box(f"BoardP{i}", (0.006, 0.11, 0.13), (BX - BW / 2 - 0.016, BY - 0.66 + i * 0.115,
-        1.25), M_POSTER[i])
-# 空调外机（右墙高位）
-box("ACU", (0.14, 0.24, 0.30), (BX + BW / 2 + 0.08, BY + 0.42, 1.55), M_WALL2)
-box("ACU2", (0.16, 0.02, 0.02), (BX + BW / 2 + 0.08, BY + 0.29, 1.42), M_METAL)
-# 小巷地面（暗）
-plane("Alley", (0.34), (0.34), (-1.02, 0.62, 0.006), M_DARK)
+    cyl(f"Umb{i}", 0.007, 0.40, (-0.485+i*0.012, -0.255+i*0.012, 0.28),
+        [M_UMB, M_POLE, M_GRN][i], rot=(0.05, 0.04, 0), verts=8)
+cyl("Trash", 0.07, 0.40, (0.60, -0.26, 0.22), M_GRN, verts=14)
+cyl("TrashL", 0.076, 0.02, (0.60, -0.26, 0.43), M_DARK, verts=14)
+bw = (0.55, -0.24)
+for dx in (-0.16, 0.16):
+    cyl(f"BWh{dx}", 0.088, 0.014, (bw[0]+dx, bw[1], 0.088), M_DARK,
+        rot=(0, math.pi/2, 0), verts=14)
+box("BFr", (0.30, 0.014, 0.02), (bw[0], bw[1], 0.135), M_POLE, rot=(0, 0, 0.1))
+box("BBr", (0.02, 0.20, 0.02), (bw[0]+0.17, bw[1], 0.21), M_POLE)
+box("BSt", (0.07, 0.02, 0.02), (bw[0]-0.09, bw[1], 0.20), M_DARK)
+box("AC", (0.15, 0.26, 0.30), (BX+BW/2+0.09, BY+0.40, 1.52), M_WALL)
+box("ACb", (0.17, 0.02, 0.02), (BX+BW/2+0.09, BY+0.26, 1.38), M_POLE)
+box("Brd", (0.014, 0.40, 0.32), (BX-BW/2-0.006, BY-0.48, 1.22), M_TRIM)
+box("MAT_Band", (0.006, 0.30, 0.10), (BX-BW/2-0.014, BY-0.48, 1.22), M_BAND)
+for i, lx in enumerate([-1.06, 1.10]):
+    cyl(f"LP{i}", 0.02, 1.5, (lx, -1.08, 0.75), M_POLE, verts=12)
+    box(f"LA{i}", (0.24, 0.02, 0.02), (lx+0.12*(1 if i else -1), -1.08, 1.48), M_POLE)
+    box(f"LH{i}", (0.11, 0.05, 0.03), (lx+0.22*(1 if i else -1), -1.08, 1.46), M_WARM)
+cyl("WP", 0.026, 1.65, (1.10, -1.10, 0.83), M_WALL, verts=12)
+box("WPc", (0.26, 0.02, 0.02), (1.10, -1.10, 1.58), M_WALL)
+for s in range(6):
+    t0, t1 = s/6, (s+1)/6
+    x0 = 1.10 + (-2.4)*t0
+    x1 = 1.10 + (-2.4)*(t1)
+    box(f"Wr{s}", (abs(x1-x0), 0.006, 0.005), ((x0+x1)/2, -1.10,
+        1.56 - 0.05*math.sin(math.pi*(t0+t1)/2)), M_DARK)
+box("TLB", (0.06, 0.055, 0.18), (0.88, -1.10, 1.24), M_DARK)
+box("OBJ_TL_Red", (0.04, 0.012, 0.04), (0.88, -1.07, 1.29), M_VEND)
+box("OBJ_TL_Green", (0.04, 0.012, 0.04), (0.88, -1.07, 1.19), M_DARK)
+box("RS", (0.16, 0.008, 0.09), (-1.02, -1.05, 1.30), M_ZEBRA)
+for i in range(4):
+    cyl(f"RL{i}", 0.007, 0.26, (1.17, -0.30-i*0.14, 0.15), M_POLE, verts=8)
+box("RLb", (0.01, 0.48, 0.014), (1.17, -0.51, 0.27), M_POLE)
 
-# ── 灯光（Blender 侧仅用于预览渲染；GLTF 导出 emissive 材质即可）──
-S.world = bpy.data.worlds.new("Night")
+# ── 灯光 ────────────────────────────────────────────────────
+S.world = bpy.data.worlds.new("N")
 S.world.use_nodes = True
-S.world.node_tree.nodes["Background"].inputs[0].default_value = (0.015, 0.02, 0.045, 1)
-S.world.node_tree.nodes["Background"].inputs[1].default_value = 1.0
+bg = S.world.node_tree.nodes["Background"]
+bg.inputs[0].default_value = (0.012, 0.016, 0.032, 1)
+bg.inputs[1].default_value = 1.0
 
-def light(name, tp, loc, energy, color, size=0.5):
-    d = bpy.data.lights.new(name, tp)
-    d.energy = energy
-    d.color = color
+def light(name, tp, loc, e, c, size=0.4):
+    d = bpy.data.lights.new(name, tp); d.energy = e; d.color = c
     if tp == 'AREA':
         d.size = size
-    o = bpy.data.objects.new(name, d)
-    o.location = loc
+    o = bpy.data.objects.new(name, d); o.location = loc
     bpy.context.collection.objects.link(o)
-    return o
 
-light("InWarm1", 'AREA', (-0.5, 0.6, 1.85), 60, (1.0, 0.78, 0.5), 0.7)
-light("InWarm2", 'AREA', (0.45, 0.6, 1.85), 60, (1.0, 0.78, 0.5), 0.7)
-light("SignNeon", 'POINT', (BX, BY - 0.4, 2.25), 25, (1.0, 0.5, 0.15))
-light("LampGlow", 'POINT', (0.92, -1.02, 1.50), 18, (1.0, 0.72, 0.40))
-light("CoolMoon", 'SUN', (0.3, -0.2, 2.5), 0.35, (0.55, 0.65, 0.95))
+light("W1", 'AREA', (BX-0.5, BY+0.05, 1.83), 55, (1.0, 0.76, 0.46), 0.6)
+light("W2", 'AREA', (BX+0.45, BY+0.05, 1.83), 55, (1.0, 0.76, 0.46), 0.6)
+light("W3", 'AREA', (BX, BY-0.25, 1.55), 18, (1.0, 0.80, 0.55), 0.8)
+light("Sign", 'POINT', (BX, BY-0.25, 2.15), 18, (1.0, 0.45, 0.55))
+light("Vend", 'POINT', (1.09, -0.15, 0.65), 8, (0.7, 0.75, 1.0))
+light("Lmp", 'POINT', (1.28, -1.08, 1.42), 12, (1.0, 0.72, 0.40))
+light("Fill", 'AREA', (0.30, -2.60, 1.75), 14, (0.55, 0.62, 0.85), 2.2)
+md = bpy.data.lights.new("Moon", 'SUN'); md.energy = 0.5
+md.color = (0.55, 0.66, 0.95)
+mo = bpy.data.objects.new("Moon", md)
+mo.rotation_euler = (math.radians(55), 0, math.radians(-25))
+bpy.context.collection.objects.link(mo)
 
-# ── 相机 + 渲染预设（确认造型用）────────────────────────────
-cam_d = bpy.data.cameras.new("Cam")
-cam = bpy.data.objects.new("Cam", cam_d)
+# ── 相机 ────────────────────────────────────────────────────
+cam_d = bpy.data.cameras.new("C"); cam = bpy.data.objects.new("C", cam_d)
 bpy.context.collection.objects.link(cam)
-cam.location = (1.35, -3.05, 1.95)
-cam_d.lens = 40
-tgt = bpy.data.objects.new("CamTarget", None)
-tgt.location = (-0.05, 0.15, 0.85)
+cam.location = (0.30, -3.35, 1.70)
+cam_d.lens = 38
+tgt = bpy.data.objects.new("T", None); tgt.location = (0.0, 0.15, 0.85)
 bpy.context.collection.objects.link(tgt)
-con = cam.constraints.new('TRACK_TO')
-con.target = tgt
-con.track_axis = 'TRACK_NEGATIVE_Z'
-con.up_axis = 'UP_Y'
+c = cam.constraints.new('TRACK_TO'); c.target = tgt
+c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
 S.camera = cam
-S.render.engine = 'BLENDER_EEVEE'
-S.render.resolution_x = 1280
-S.render.resolution_y = 960
-S.eevee.use_shadows = True
 
-# ── 导出 GLTF ───────────────────────────────────────────────
-outdir = Path(__file__).parent / "konbini_web"
-outdir.mkdir(exist=True) if False else outdir.mkdir(exist_ok=True)
-# ── 场景 JSON 导出（绕开 GLTF 生态：blender 5.2 导出与 three loader 兼容连环雷）
+# ── 渲染设置（EEVEE + Freestyle）────────────────────────────
+S.render.engine = 'BLENDER_EEVEE'
+S.render.resolution_x = 1440
+S.render.resolution_y = 1080
+S.eevee.taa_render_samples = 64
+vl = S.view_layers[0]
+S.render.use_freestyle = True    # W-路径：三渲二线条
+_lstyle = bpy.data.linestyles.get("LS2") or bpy.data.linestyles.new("LS2")
+_lstyle.thickness = 1.6
+_lstyle.color = (0.07, 0.08, 0.13)
+_ls = vl.freestyle_settings.linesets[0]
+_ls.linestyle = _lstyle
+
+# ── 场景 JSON 导出 ──────────────────────────────────────────
+import json as _json
 out_objs = []
 for o in bpy.data.objects:
     if o.type != 'MESH':
@@ -324,8 +263,7 @@ for o in bpy.data.objects:
     if o.data.materials:
         mm = o.data.materials[0]
         if mm and mm.use_nodes:
-            b = next((nd for nd in mm.node_tree.nodes
-                      if nd.type == 'BSDF_PRINCIPLED'), None)
+            b = next((nd for nd in mm.node_tree.nodes if nd.type == 'BSDF_PRINCIPLED'), None)
             if b:
                 mrec['c'] = [round(c, 3) for c in b.inputs['Base Color'].default_value[:3]]
                 mrec['a'] = round(b.inputs['Alpha'].default_value, 3)
@@ -335,13 +273,59 @@ for o in bpy.data.objects:
                 if es and es > 0:
                     mrec['e'] = [round(c, 3) for c in b.inputs['Emission Color'].default_value[:3]]
                     mrec['es'] = round(es, 2)
-    out_objs.append({
-        'n': o.name, 'g': g,
-        's': [round(d.x, 4), round(d.y, 4), round(d.z, 4)],
-        'p': [round(o.location.x, 4), round(o.location.y, 4), round(o.location.z, 4)],
-        'r': [round(o.rotation_euler.x, 4), round(o.rotation_euler.y, 4),
-              round(o.rotation_euler.z, 4)],
-        'm': mrec})
-(WEB := Path(__file__).parent / "konbini_web").mkdir(exist_ok=True)
+    out_objs.append({'n': o.name, 'g': g,
+                     's': [round(d.x, 4), round(d.y, 4), round(d.z, 4)],
+                     'p': [round(o.location.x, 4), round(o.location.y, 4), round(o.location.z, 4)],
+                     'r': [round(o.rotation_euler.x, 4), round(o.rotation_euler.y, 4),
+                           round(o.rotation_euler.z, 4)],
+                     'm': mrec})
+WEB = Path(__file__).parent / "konbini_web"
+WEB.mkdir(exist_ok=True)
 (WEB / "scene.json").write_text(_json.dumps(out_objs, ensure_ascii=False), encoding='utf-8')
-print("[konbini] scene.json objects:", len(out_objs))
+print("[konbini] v2 objects:", len(out_objs))
+
+
+# ── turntable 视频输出（EEVEE 全渲染能力：GI/辉光/柔影）──────
+if "--turntable" in sys.argv:
+    sc = bpy.context.scene
+    sc.render.engine = 'BLENDER_EEVEE'
+    sc.eevee.taa_render_samples = 48
+    sc.render.resolution_x = 1280
+    sc.render.resolution_y = 720
+    sc.render.fps = 24
+    sc.frame_start = 1
+    sc.frame_end = 144                     # 6 秒 @24fps
+    sc.render.image_settings.file_format = 'FFMPEG'
+    sc.render.ffmpeg.format = 'MPEG4'
+    sc.render.ffmpeg.codec = 'H264'
+    sc.render.ffmpeg.constant_rate_factor = 'HIGH'
+    sc.render.filepath = str(Path(__file__).parent / "konbini_turntable.mp4")
+    # compositor 辉光（动画夜景的灵魂）
+    sc.use_nodes = True
+    nt = sc.node_tree
+    nt.nodes.clear()
+    rl = nt.nodes.new("CompositorNodeRLayers")
+    gl = nt.nodes.new("CompositorNodeGlare")
+    gl.glare_type = 'BLOOM'
+    gl.threshold = 0.9
+    gl.size = 8
+    gl.mix = -0.6
+    comp = nt.nodes.new("CompositorNodeComposite")
+    nt.links.new(rl.outputs["Image"], gl.inputs["Image"])
+    nt.links.new(gl.outputs["Image"], comp.inputs["Image"])
+    # 相机绕 target 环绕（摇摆 210°）
+    tgt_loc = (-0.05, 0.10, 0.55)
+    import math as _m
+    def drive():
+        f = sc.frame_current
+        ang = _m.radians(-105 + 210 * (f - 1) / 143)     # -105° → +105°
+        rad = 3.35
+        cam.location = (tgt_loc[0] + rad * _m.sin(ang),
+                        tgt_loc[1] - rad * _m.cos(ang),
+                        1.55 + 0.35 * _m.sin(_m.radians(f / 143 * 180)))
+        d = cam.location - __import__("mathutils").Vector(tgt_loc)
+        cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+    bpy.app.handlers.frame_change_pre.append(lambda s, _: drive())
+    sc.frame_set(1); drive()
+    bpy.ops.render.render(animation=True)
+    print("[konbini] turntable done:", sc.render.filepath)

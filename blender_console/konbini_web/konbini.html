@@ -17,40 +17,43 @@
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0d18);
 scene.fog = new THREE.Fog(0x0a0d18, 9, 22);
 
-const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.05, 60);
-camera.position.set(1.85, -2.55, 1.45);
+const camera = new THREE.PerspectiveCamera(33, innerWidth/innerHeight, 0.05, 60);
+camera.position.set(3.3, -3.7, 3.1);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.06;
-controls.target.set(-0.05, 0.10, 0.42);
+controls.target.set(0.0, 0.0, 0.35);
 controls.minDistance = 0.8; controls.maxDistance = 12;
 controls.maxPolarAngle = Math.PI * 0.49;
 
 /* ── 光：暖店内 × 冷雨夜 ── */
 scene.add(new THREE.AmbientLight(0x323c60, 1.7));
-const hemi = new THREE.HemisphereLight(0x4a5f92, 0x14161f, 1.1);
+const hemi = new THREE.HemisphereLight(0x4a5f92, 0x14161f, 1.7);
 scene.add(hemi);
 const moon = new THREE.DirectionalLight(0x8fa8d8, 0.75);
 moon.position.set(3, 2, 6); scene.add(moon);
-const warm1 = new THREE.PointLight(0xffd9a0, 1.7, 2.4, 2);
+const warm1 = new THREE.PointLight(0xffd9a0, 1.4, 1.8, 2);
 warm1.position.set(-0.5, 0.55, 1.7); scene.add(warm1);
-const warm2 = new THREE.PointLight(0xffd9a0, 1.7, 2.4, 2);
+const warm2 = new THREE.PointLight(0xffd9a0, 1.4, 1.8, 2);
 warm2.position.set(0.45, 0.55, 1.7); scene.add(warm2);
-const neon = new THREE.PointLight(0xff8a30, 3.0, 2.5, 2);
+const neon = new THREE.PointLight(0xff8a30, 2.2, 2.0, 2);
 neon.position.set(-0.05, -0.1, 2.1); scene.add(neon);
-const lamp = new THREE.PointLight(0xffb866, 3.6, 2.2, 2);
+const lamp = new THREE.PointLight(0xffb866, 2.4, 2.0, 2);
 lamp.position.set(1.10, -1.05, 1.45); scene.add(lamp);
 const lamp2 = new THREE.PointLight(0xffb866, 3.0, 2.0, 2);
 lamp2.position.set(-1.06, -1.05, 1.45); scene.add(lamp2);
@@ -166,6 +169,11 @@ for (let i = 0; i < 14; i++) {
   scene.add(m); ripples.push(m);
 }
 
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.65, 0.85);
+composer.addPass(bloom);
+
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
@@ -214,11 +222,11 @@ function animate() {
     tlRed.material.emissiveIntensity = green ? 0.08 : 1.7;
     tlGreen.material.emissiveIntensity = green ? 1.7 : 0.08;
   }
-  warm1.intensity = 1.7 + Math.sin(t * 1.7) * 0.08;
-  warm2.intensity = 1.7 + Math.sin(t * 1.7 + 1) * 0.08;
+  warm1.intensity = 1.4 + Math.sin(t * 1.7) * 0.06;
+  warm2.intensity = 1.4 + Math.sin(t * 1.7 + 1) * 0.06;
 
   controls.update();
-  renderer.render(scene, camera);
+  composer.render();
 }
 animate();
 
@@ -226,6 +234,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
 });
 </script>
 </body>
