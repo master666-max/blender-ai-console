@@ -237,13 +237,28 @@ class IntakeSession:
                 "rounds": self.round}
 
     # ── PRD → plan 骨架（一份两用）──────────────────────────
-    def to_plan_skeleton(self, prd: dict[str, Any] | None = None) -> dict[str, Any]:
+    def to_plan_skeleton(self, prd: dict[str, Any] | None = None,
+                         logic_tree: dict[str, Any] | None = None) -> dict[str, Any]:
         """PRD 卡 → plan-JSON 骨架：部件清单 → sections[]（part/stage/depends_on）。
 
+        M7 两桥合一：logic_tree 传入时读逻辑树 nodes 生成 sections——
+        **deps 并行**（修 P1 串链缺陷的源头），gate 类节点转 constraints，
+        部件覆盖度写入 constraints 留痕（PARTS_COVERAGE）。
+        未传时保持 parts 串链（向后兼容——马克杯流程不回归）。
         骨架的 op/参数细节由下游 AI 填充（fill 的依据 = fields 的语义名）——
         本函数只保证**结构合法**（plan_schema 白名单内）与**依赖顺序**（depends_on 链）。
         """
         prd = prd or self.prd_card()
+        if logic_tree is not None:
+            from logic_tree import to_plan as lt_to_plan      # 局部导入防环
+            base = lt_to_plan(logic_tree)
+            base["intent"] = prd["intent"]
+            names = [n.get("name", "") for n in logic_tree.get("nodes", [])]
+            missing = [p for p in prd["parts"]
+                       if not any(p in nm or nm in p for nm in names)]
+            base.setdefault("constraints", []).append(
+                {"check": "PARTS_COVERAGE=%s" % (missing or "全覆盖")})
+            return base
         dl = self.fields.get("detail_level", {}).get("value", "standard")
         stage_plan = {"draft": ["blockout"], "standard": ["blockout", "structure"],
                       "fine": ["blockout", "structure", "detail"]}.get(dl,

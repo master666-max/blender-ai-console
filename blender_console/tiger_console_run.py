@@ -88,6 +88,15 @@ for nid in byid:
                           'parameters': [{'name': 'Size_X', 'type': 'FLOAT', 'value': at35(5800)},
                                          {'name': 'Size_Y', 'type': 'FLOAT', 'value': at35(2900)},
                                          {'name': 'Size_Z', 'type': 'FLOAT', 'value': at35(2400)}]}
+# M4-8 契约：boolean_diff 需要 operand（嵌套 op spec——op_compiler L211-219）
+for _s in sec_map.values():
+    if _s['op'] == 'boolean_diff' and 'operand' not in _s:
+        _pr = byid[_s['id']]['build'].get('params_real', {})
+        _L, _W, _H = _pr.get('L', 6320), _pr.get('W', 3160), _pr.get('H', 1000)
+        _wall = at35(100)                        # 壁厚 100mm 装甲 → 内腔各向 -200mm
+        _s['operand'] = {'op': 'cube',
+                         'size': [at35(_L - 200), at35(_W - 200), at35(_H + 400)],
+                         'location': [0, 0, at35(200)]}   # 内腔上穿（敞口车体）
 plan = {'version': '0.3', 'intent': sk['intent'], 'sections': list(sec_map.values()),
         'constraints': sk.get('constraints', [])}
 

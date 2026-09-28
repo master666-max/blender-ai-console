@@ -114,7 +114,8 @@ while True:
         break
     for nid in ready:
         runner.start(nid)
-        runner.pass_gate(nid, evidence=f"fixture {nid}")
+        _act = "human:reviewer" if runner._depth(nid) == 0 else "engine:evo"
+        runner.pass_gate(nid, evidence=f"fixture {nid}", actor=_act)
         steps += 1
     if steps > 100:
         break
@@ -151,5 +152,58 @@ check("负重轮只依赖车体（并行）", lambda: dm.get("1.2"), ["1.1"])
 check("gate 穿透（3.1/3.2 不进 sections）",
       lambda: all(s['id'] not in ('3.1', '3.2') for s in plan['sections']), True)
 check("constraints 2 条（gate 节点入约束）", lambda: len(plan['constraints']), 2)
+
+# ── [7] M5：G1 铁门禁 + sees 留痕（M7-3 上游吸收）────────────
+print("\n[7] M5 G1 目验门 + sees")
+_fresh2 = load_tree(TIGER)
+for _n in _fresh2["nodes"]:
+    _n["status"] = "pending"
+r_g1 = LogicTreeRunner(_fresh2)
+r_g1.start("1.1")                       # 1.1 无 deps → depth 0 = blockout 层
+try:
+    r_g1.pass_gate("1.1", actor="engine:evo")
+    check("G1 负例：engine 过 blockout 门被拦", lambda: False, True)
+except ValueError:
+    check("G1 负例：engine 过 blockout 门被拦（铁门禁）", lambda: True, True)
+check("G1 拦截留痕", lambda: any("G1" in e for e in r_g1.evidence.get("1.1", [])), True)
+r_g1.pass_gate("1.1", actor="human:reviewer", evidence="剪影审定")   # 仍 building——直接 human 过门
+check("G1 正例：human 过门", lambda: r_g1.byid["1.1"]["status"], "passed")
+r_sees = LogicTreeRunner(load_tree(TIGER))
+for _n in r_sees.tree["nodes"]:
+    _n["status"] = "pending"
+r_sees.start("1.1")
+r_sees.fail_gate("1.1", "测试失败")
+r_sees.retry("1.1")                     # 无 sees → 警告留痕不拦
+check("retry 无 sees → 警告留痕", lambda: any("sees 缺失" in e for e in r_sees.evidence.get("1.1", [])), True)
+check("retry 后回 pending", lambda: r_sees.byid["1.1"]["status"], "pending")
+r_sees.start("1.1")
+r_sees.fail_gate("1.1")
+r_sees.retry("1.1", sees="上帧履带板立着——已改切线贴合")
+check("retry 有 sees → 引用留痕", lambda: any("切线贴合" in e for e in r_sees.evidence.get("1.1", [])), True)
+
+# ── [8] 两桥合一（intake → 逻辑树 → plan）───────────────────
+print("\n[8] 两桥合一（intake → 逻辑树 → plan）")
+from intake import IntakeSession
+from plan_schema import validate_plan as vp2
+s_tank = IntakeSession(brief='1:35 虎式坦克后期型（1944 Henschel 炮塔）', mode='full',
+                       parts=['车体', '炮塔', '炮管', '履带', '负重轮', '舱门'])
+s_tank.freeze()
+plan_bridge = s_tank.to_plan_skeleton(logic_tree=tree)
+issues_bridge = vp2(plan_bridge, segment_names=[s2['id'] for s2 in plan_bridge['sections']])
+check("两桥合一：PlanSchema 零 issue", lambda: len(issues_bridge), 0)
+cov = [c for c in plan_bridge.get('constraints', []) if 'PARTS_COVERAGE' in str(c.get('check', ''))]
+check("部件覆盖度留痕", lambda: len(cov) >= 1, True)
+dm2 = {s2['id']: s2['depends_on'] for s2 in plan_bridge['sections']}
+check("两桥合一：主炮 deps 并行（非串链）", lambda: dm2.get('2.2'), ['2.1'])
+
+# ── [9] M4：NLG 判词接 gate 证据流 ──────────────────────────
+print("\n[9] M4 NLG 判词")
+from nlg_bands import verdict_report
+preds = [{"predicate": "hull_length", "actual_mm": 180.46, "expect_mm": 180.57,
+          "rel_pct": -0.06, "band": "带内", "ok": True},
+         {"predicate": "roadwheel_count", "actual": 14, "expect": 16, "ok": False}]
+rep = verdict_report(preds)
+check("判词含 FAIL 项", lambda: "FAIL" in rep, True)
+check("判词含带内项", lambda: "带内" in rep, True)
 
 sys.exit(1 if failed else 0)

@@ -172,12 +172,30 @@ class LogicTreeRunner:
             raise ValueError(f"{nid}: deps 未全部 passed")
         n["status"] = "building"
 
-    def pass_gate(self, nid: str, evidence: str = "") -> None:
+    def _depth(self, nid: str, _seen: frozenset[str] = frozenset()) -> int:
+        """deps 图深度（0 = blockout 层——G1 目验门管辖区，M7-3）。"""
+        if nid in _seen:
+            return 0
+        deps = self.byid[nid].get("deps", [])
+        if not deps:
+            return 0
+        return 1 + max(self._depth(d, _seen | {nid}) for d in deps)
+
+    def pass_gate(self, nid: str, evidence: str = "",
+                  actor: str = "engine:evo") -> None:
+        """过门。G1 铁门禁（M7-3 上游吸收）：blockout 层（depth==0）剪影/比例是
+        人审美判断——机械 verifier 不替代，必须 human:* actor 审定（即使 AUTOPILOT 档）。
+        G1 是**阶段维度**强制，TrustPolicy 是**风险维度**分档——两维正交叠加。"""
         n = self.byid[nid]
         if n["status"] != "building":
             raise ValueError(f"{nid}: 状态 {n['status']} 不可过门（需 building）")
+        if self._depth(nid) == 0 and not str(actor).startswith("human:"):
+            self.evidence.setdefault(nid, []).append(
+                "G1 ⛔ blockout 层需 human: actor（阶段维度铁门禁——剪影/比例人审美，verifier 不替代）")
+            raise ValueError(f"{nid}: G1 目验门——blockout 层需 human: actor 审定"
+                             "（M7-3 阶段维度铁门禁；渲染图已产出供人审定）")
         n["status"] = "passed"
-        self.evidence.setdefault(nid, []).append(evidence or "gate passed")
+        self.evidence.setdefault(nid, []).append(f"{actor}: {evidence or 'gate passed'}")
 
     def fail_gate(self, nid: str, reason: str = "") -> None:
         n = self.byid[nid]
@@ -186,10 +204,16 @@ class LogicTreeRunner:
         n["status"] = "failed"
         self.evidence.setdefault(nid, []).append("FAILED: " + (reason or "gate failed"))
 
-    def retry(self, nid: str) -> None:
-        """failed → pending（修正后重新排队）"""
+    def retry(self, nid: str, sees: str | None = None) -> None:
+        """failed → pending（修正后重新排队）。
+        M7-3：修正类提案必须引用所见（sees——上一帧具体变化/changed_ratio/diff path）；
+        缺失 = 警告留痕**不拦**（上游定盘：警告级）。"""
         if self.byid[nid]["status"] != "failed":
             raise ValueError(f"{nid}: 仅 failed 可 retry")
+        if sees:
+            self.evidence.setdefault(nid, []).append(f"sees: {sees}")
+        else:
+            self.evidence.setdefault(nid, []).append("△ sees 缺失（M7-3 目验引用）——留痕不拦")
         self.byid[nid]["status"] = "pending"
 
     def progress(self) -> dict[str, int]:

@@ -341,6 +341,54 @@ def _op_set_material(ad, tree, sid, spec, src):
     return n, "Geometry"
 
 
+def _op_array_linear(ad, tree, sid, spec, src):
+    """线性阵列：GeometryToInstance → Duplicate(Amount) → Index×offset → Translate Instances。
+    GN 实测 5.2：DuplicateElements IN=[Geometry,Selection,Amount] OUT=[Geometry,Duplicate Index]。"""
+    _ = src
+    gi2 = ad.add_node(tree, "GeometryNodeGeometryToInstance", "To_Instances")
+    dup = ad.add_node(tree, "GeometryNodeDuplicateElements", "Duplicate")
+    _set_const(dup, "Amount", spec.get("count", 2))
+    idx = ad.add_node(tree, "Math_Multiply" if False else "ShaderNodeMath", "Index_Scale")
+    idx.operation = 'MULTIPLY'
+    _set_const(idx, "Value_2", spec.get("offset_x", 0.05))
+    comb = ad.add_node(tree, "FunctionNodeCombineXYZ", "Offset_Vec")
+    tree.links.new(dup.outputs["Duplicate Index"], idx.inputs[0])
+    tree.links.new(idx.outputs[0], comb.inputs["X"])
+    trans = ad.add_node(tree, "GeometryNodeTranslateInstances", "Translate")
+    tree.links.new(dup.outputs["Geometry"], trans.inputs["Instances"])
+    tree.links.new(comb.outputs[0], trans.inputs["Translation"])
+    return trans, "Instances"
+
+
+def _op_array_radial(ad, tree, sid, spec, src):
+    """径向阵列：Duplicate(Amount) → Index×angle → Rotate Instances（绕 z，Pivot=原点）。"""
+    _ = src
+    gi2 = ad.add_node(tree, "GeometryNodeGeometryToInstance", "To_Instances")
+    dup = ad.add_node(tree, "GeometryNodeDuplicateElements", "Duplicate")
+    _set_const(dup, "Amount", spec.get("count", 6))
+    tree.links.new(gi2.outputs[0], dup.inputs["Geometry"])
+    mul = ad.add_node(tree, "ShaderNodeMath", "Angle_Scale")
+    mul.operation = 'MULTIPLY'
+    _set_const(mul, "Value_2", spec.get("angle_step_deg", 45.0))
+    comb = ad.add_node(tree, "FunctionNodeCombineXYZ", "Euler")
+    tree.links.new(dup.outputs["Duplicate Index"], mul.inputs[0])
+    tree.links.new(mul.outputs[0], comb.inputs["Z"])
+    rot = ad.add_node(tree, "GeometryNodeRotateInstances", "Rotate")
+    tree.links.new(dup.outputs["Geometry"], rot.inputs["Instances"])
+    tree.links.new(comb.outputs[0], rot.inputs["Rotation"])
+    return rot, "Instances"
+
+
+def _op_revolve_profile(ad, tree, sid, spec, src):
+    """旋转轮廓近似：MeshCone（Radius Top/Bottom/Depth）——任意轮廓 M4-11 后续（近似如实标注）。"""
+    _ = src
+    n = ad.add_node(tree, "GeometryNodeMeshCone", "Revolve_Cone")
+    _set_const(n, "Radius Top", spec.get("radius_top", 0.02))
+    _set_const(n, "Radius Bottom", spec.get("radius_bottom", 0.04))
+    _set_const(n, "Depth", spec.get("depth", 0.05))
+    return n, "Mesh"
+
+
 OPS = {
     "cylinder": _op_cylinder,
     "cube": _op_cube,
@@ -357,6 +405,9 @@ OPS = {
     "join_geometry": _op_join_geometry,
     "set_material": _op_set_material,           # M4-11（EXP-006：编译进节点树）
     "sdf_boolean": _op_sdf_boolean,             # M4-5（A30：破坏性段落 SDF 中间表示）
+    "array_linear": _op_array_linear,           # M4-4/5：Duplicate+Translate（GN 实测 5.2 socket）
+    "array_radial": _op_array_radial,           # M4-4/5：Duplicate+Rotate（绕 z 极坐标阵列）
+    "revolve_profile": _op_revolve_profile,     # M4-11：MeshCone 近似旋转轮廓（EXP 纪律：近似如实标注）
 }
 
 # ── M4-3b · op 元数据契约（吸收机制库五要素头部纪律）─────────
@@ -385,6 +436,13 @@ OP_META = {
                      "lessons": ["EXP-006：材质编译进节点树（GeometryNodeSetMaterial 引用 mat_compiler 产物），禁走 bpy 材质槽——重编译随段落重建引用，免疫静默丢失",
                                  "Material 是 datablock socket（default_value 直赋材质对象）",
                                  "物理约束编译期校验：Metallic/Roughness ∈[0,1]、IOR ∈[1.0,2.0]（mat_compiler 响亮失败）"]},
+    "array_linear": {"verified": "tiger_console_run.py", "lessons": []},
+    "array_radial": {"verified": "tiger_console_run.py", "lessons": []},
+    "revolve_profile": {"verified": "tiger_console_run.py",
+                        "lessons": ["近似实现：MeshCone（Radius Top/Bottom/Depth）——任意轮廓旋转待 M4-11 后续"]},
+    "array_linear": {"count", "offset_x", "offset_y", "offset_z"},
+    "array_radial": {"count", "angle_step_deg", "axis_z"},
+    "revolve_profile": {"radius_top", "radius_bottom", "depth"},
     "sdf_boolean": {"verified": "m45_live.py",
                     "lessons": ["Grid 走 VALUE socket 引用（非 GEOMETRY）——MeshToSDFGrid→SDFGridBoolean→GridToMesh 全链 VALUE",
                                 "GridToMesh.Threshold 默认 0.1 是陷阱：0.1=空网格（0 verts），必须显式 0.0（m45_probe3 实测 0.0→61888 verts）",
