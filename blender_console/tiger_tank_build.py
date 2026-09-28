@@ -66,21 +66,37 @@ def mat(name, color, rough=0.6, metal=0.0):
 
 
 def camo_mat():
+    """v3.3：Object 坐标（跨面一致修暗带）+ Zimmerit 竖纹 bump（防磁涂层质感）"""
     m = bpy.data.materials.new("tiger_camo")
     m.use_nodes = True
     nt = m.node_tree
     b = nt.nodes["Principled BSDF"]
-    b.inputs["Roughness"].default_value = 0.55
+    b.inputs["Roughness"].default_value = 0.58
+    # 迷彩斑块：Object 坐标（跨面一致）
+    tc = nt.nodes.new("ShaderNodeTexCoord")
     noise = nt.nodes.new("ShaderNodeTexNoise")
     noise.inputs["Scale"].default_value = 6.5
     noise.inputs["Detail"].default_value = 1.4
+    nt.links.new(tc.outputs["Object"], noise.inputs["Vector"])
     ramp = nt.nodes.new("ShaderNodeValToRGB")
     ramp.color_ramp.elements[0].position = 0.38
-    ramp.color_ramp.elements[0].color = (0.46, 0.40, 0.24, 1)
+    ramp.color_ramp.elements[0].color = (0.56, 0.48, 0.26, 1)
     ramp.color_ramp.elements[1].position = 0.60
     ramp.color_ramp.elements[1].color = (0.21, 0.25, 0.14, 1)
     nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], b.inputs["Base Color"])
+    # Zimmerit 竖纹 bump：波纹沿竖向拉长（Mapping z 压缩）
+    znoise = nt.nodes.new("ShaderNodeTexNoise")
+    znoise.inputs["Scale"].default_value = 90.0
+    znoise.inputs["Detail"].default_value = 2.0
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (1.0, 1.0, 0.18)   # 竖纹拉长
+    nt.links.new(tc.outputs["Object"], mapping.inputs["Vector"])
+    nt.links.new(mapping.outputs["Vector"], znoise.inputs["Vector"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.25
+    nt.links.new(znoise.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
     return m
 
 
@@ -140,8 +156,8 @@ for side in (-1, 1):
         y_off = y_c + side * (at35(60) if i % 2 else -at35(60))   # 内外交错
         cyl("rw_rim_%s%d" % (side, i), WR, at35(60),
             (x, y_off, WHEEL_Z), rot=(0, radians(90), 0), verts=24, mat=M_ARMOR)
-        cyl("rw_hub_%s%d" % (side, i), WR * 0.58, at35(130),
-            (x, y_off + side * at35(25), WHEEL_Z), rot=(0, radians(90), 0),
+        cyl("rw_hub_%s%d" % (side, i), WR * 0.58, at35(110),
+            (x, y_off, WHEEL_Z), rot=(0, radians(90), 0),
             verts=16, mat=M_DARK)
 for s in (-1, 1):
     cyl("drive_%d" % s, at35(580), at35(90),
@@ -160,7 +176,7 @@ for side in (-1, 1):
         x = A_X * cos(th)
         z = CZ + B_Z * sin(th)
         ang = math.atan2(-B_Z * cos(th), -A_X * sin(th))   # 切线贴合：底/顶水平、前后竖直
-        box("shoe_%s%02d" % (side, i), at35(150), at35(725), at35(95),
+        box("shoe_%s%02d" % (side, i), at35(150), at35(725), at35(80),
             (x, y_c, z), M_TRACK, rot=(0, ang, 0))
 
 print("[build] [1.3-fenders] fenders")  # 非树内节点（挡泥板属 1.3 附属）
@@ -189,8 +205,8 @@ TUR_D = at35(2080)
 TUR_X = at35(200)
 _turret = cyl("tiger_turret", TUR_D, TUR_H, (TUR_X, 0, TUR_Z0 + TUR_H / 2), verts=24, mat=M_ARMOR)
 _bev = _turret.modifiers.new("bevel", 'BEVEL')
-_bev.width = 0.004
-_bev.segments = 3
+_bev.width = 0.008
+_bev.segments = 5
 box("turret_front", at35(250), at35(1850), TUR_H,
     (TUR_X + TUR_D / 2 - at35(60), 0, TUR_Z0 + TUR_H / 2), M_ARMOR)
 box("turret_bustle", at35(600), at35(1700), TUR_H * 0.9,
@@ -201,7 +217,7 @@ cyl("cupola", at35(600), at35(190),
 
 mark("2.2", "3-segment + brake")
 GUN_Z = TUR_Z0 + TUR_H * 0.50
-MANT_X = TUR_X + TUR_D / 2 + at35(150)
+MANT_X = TUR_X + TUR_D / 2 - at35(30)
 cyl("gun_root", at35(160), at35(800),
     (MANT_X + at35(400), 0, GUN_Z), rot=(0, radians(90), 0), mat=M_DARK)
 cyl("gun_mid", at35(115), at35(3050),
@@ -284,7 +300,7 @@ def sun(name, energy, rot):
     l.rotation_euler = rot
 
 
-sun("key", 3.0, (radians(48), 0, radians(35)))
+sun("key", 2.4, (radians(48), 0, radians(35)))
 sun("rim", 1.6, (radians(55), 0, radians(-140)))
 bpy.ops.object.light_add(type='AREA', location=(-0.18, -0.28, 0.18))
 f = bpy.context.active_object
