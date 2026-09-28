@@ -31,11 +31,11 @@ This project's countermeasure in one sentence:
 
 ## What it looks like
 
-| A dialogue-paragraph artifact | Same-camera render diff (ground truth for every commit) |
+| Dialogue artifact · presentation rig | Same-camera render diff (ground truth for every commit) |
 |---|---|
 | ![Mug with ring handle](showcase/mug.png) | ![Render diff triplet](showcase/render-diff.png) |
 
-Left: a mug declared and compiled step by step in dialogue (ring handle; M6 A/B frame). Right: deterministic same-camera render diff — hard-edged cube → heavily beveled variant, changed pixels highlighted in red; re-rendering the same scene yields **0-pixel drift**, so the diff gate has zero false positives.
+Left: a mug declared and compiled in dialogue — 128-segment smooth body, a real recessed cavity, boolean-fused handle — rendered by the project's own presentation rig (M7-3 three-point lighting + 50mm f/2.8 shallow DOF, EEVEE in 2.4s). Right: deterministic same-camera render diff — hard-edged cube → heavily beveled variant, changed pixels highlighted in red; re-rendering the same scene yields **0-pixel drift**, so the diff gate has zero false positives.
 
 ## What makes it different
 
