@@ -46,3 +46,7 @@ blender_server_log.txt
 
 # 验收结果落盘（运行时产物，不入库）
 results/
+
+# 会话工作产物（探针/实验运行时目录）
+blender_console/*_work/
+docs/architecture/verify_mermaid.html
