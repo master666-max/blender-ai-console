@@ -163,6 +163,21 @@ class LogicTreeRunner:
         return all(self.byid[d]["status"] == "passed" for d in self.byid[nid].get("deps", []))
 
     def next_ready(self) -> list[str]:
+        """可开工集合。W-8 销单（2026-09-29）：blocked 幽灵状态落地——
+        pending 且 deps 有 failed → 置 blocked（需上游先修复）；
+        blocked 且 deps 全 passed（上游修复重过）→ 解除回 pending。"""
+        for n in self.tree["nodes"]:
+            st, nid = n["status"], n["id"]
+            deps_stuck = any(self.byid[d]["status"] in ("failed", "blocked")
+                             for d in n.get("deps", []))   # 阻断传播：failed 或 blocked
+            if st == "pending" and deps_stuck:
+                n["status"] = "blocked"
+                self.evidence.setdefault(nid, []).append(
+                    "BLOCKED: deps 中有 failed/blocked——需上游先修复")
+            elif st == "blocked" and self._deps_satisfied(nid):
+                n["status"] = "pending"
+                self.evidence.setdefault(nid, []).append(
+                    "UNBLOCKED: 上游已全部 passed——恢复排队")
         return [n["id"] for n in self.tree["nodes"]
                 if n["status"] == "pending" and self._deps_satisfied(n["id"])]
 

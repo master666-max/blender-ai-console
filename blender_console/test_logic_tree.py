@@ -206,4 +206,34 @@ rep = verdict_report(preds)
 check("判词含 FAIL 项", lambda: "FAIL" in rep, True)
 check("判词含带内项", lambda: "带内" in rep, True)
 
+# ── [10] W-8：blocked 状态落地（幽灵状态→真转移）────────────
+print("\n[10] W-8 blocked 置位/解除")
+from logic_tree import LogicTreeRunner
+lt8 = {"schema_version": "2.0", "meta": {"scale_factor": 1},
+       "nodes": [
+           {"id": "A", "tier": 1, "status": "pending", "deps": [],
+            "build": {"op": "cube", "params_real": {}},
+            "gate": {"machine_spec": {"expr": "bbox_xyz"}}},
+           {"id": "B", "tier": 2, "status": "pending", "deps": ["A"],
+            "build": {"op": "cube", "params_real": {}},
+            "gate": {"machine_spec": {"expr": "bbox_xyz"}}},
+           {"id": "C", "tier": 2, "status": "pending", "deps": ["B"],
+            "build": {"op": "cube", "params_real": {}},
+            "gate": {"machine_spec": {"expr": "bbox_xyz"}}}]}
+run8 = LogicTreeRunner(lt8)
+run8.start("A")
+run8.fail_gate("A", "剪影不像")
+ready8 = run8.next_ready()
+check("deps failed → B 置 blocked（幽灵状态变真转移）",
+      lambda: (run8.byid["B"]["status"], run8.byid["C"]["status"]),
+      ("blocked", "blocked"))
+check("blocked 不进 next_ready", lambda: "B" in ready8 or "C" in ready8, False)
+run8.retry("A")                                  # failed → pending
+run8.start("A"); run8.pass_gate("A", actor="human:otto")
+run8.next_ready()                                 # 触发解除扫描
+check("上游修复后 B 解除 → pending",
+      lambda: run8.byid["B"]["status"], "pending")
+check("解除留痕 evidence（BLOCKED/UNBLOCKED）",
+      lambda: ("UNBLOCKED" in "".join(run8.evidence.get("B", []))), True)
+
 sys.exit(1 if failed else 0)

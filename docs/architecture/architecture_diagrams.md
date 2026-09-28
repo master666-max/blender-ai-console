@@ -271,9 +271,11 @@ stateDiagram-v2
     building --> failed: verify FAIL / Gate 拦截
 
     failed --> pending: retry(sees) 修正后重排队
-    failed --> blocked: 需上游先修复<br/>⚠️ 预留未接线（挂单 W-8）
+    failed --> blocked: 需上游先修复（W-8 已接线）
 
-    pending --> blocked: deps 中有 failed<br/>⚠️ 预留未接线（挂单 W-8）
+    pending --> blocked: deps 有 failed/blocked<br/>（阻断传播——W-8 已接线）
+
+    blocked --> pending: 上游修复重过门<br/>（next_ready 扫描解除）
 
     passed --> [*]: 段落交付
 
@@ -473,13 +475,13 @@ graph TB
 
 | W-6 | **"四层索引"未实现**：experience 实际只有 trigger 键匹配 + weight 排序召回；向量/参数分布/图结构/时序四层索引是设计愿景（v1 图曾虚写"已实现"——2026-09-29 反向审计揪出） | 新索引层落地时销单，图⑥ C3 改实线描述 |
 | ~~W-7~~ | ~~commits.commit 主链路未接线~~ | **已销单（2026-09-29）**：console.compile 成功即 `commits.commit(seg, vparams快照, "fp:"+fingerprint, deps)`（内容寻址自动去重，revert/set_param 重编译产出新 hash）；E2E 实证 export_state.commits 五段全 hash |
-| W-8 | **blocked 幽灵状态**：logic_tree.STATUSES 含 blocked，但代码无任何转移将其置位（④ 的两条 blocked 入边在代码不存在） | 补置位逻辑（deps failed 时 next_ready 拒绝并置 blocked）或删状态时销单 |
+| W-8 | ~~blocked 幽灵状态~~ **已销单（2026-09-29）**：next_ready 扫描落地——pending+deps(failed/blocked) → blocked（阻断传播），blocked+deps 全 passed → 解除回 pending；evidence 留痕 BLOCKED/UNBLOCKED；test_logic_tree [10] 4 断言；图④ 补三条转移 |
 | W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量）：recall 命中自动计数 provenance.recall_hits（match>0 才算真命中，落盘）；survival_rate(eid)=reuse_success/recall_hits 暴露为评分信号——**不反哺排序权重**（防自增强反馈环）。test_experience [7d] 4 断言。**遗留**：与 W-6 对齐登记为四层索引之一层；评分信号 hook 进 agent 评分待接 | **部分销单**：计数闭环+survival_rate 已落地；评分信号 hook 与四层索引归并随 W-6 收口 |
 | ~~W-10~~ | ~~共享词汇卡未提供~~ | **已销单（2026-09-29）**：intake.py `vocab_card()` 挂在 ask_round 卡上——11 词条（segment/gate/G1/blockout/tier/set_param/patch/GoodPoint/revert/verified_failure/draft-promote），test_intake 22/22 |
-| W-11 | **失败工件考古接口缺失**（Orr 垃圾桶原则：老技师先翻废纸篓解读坏件共性）：中间产物**有痕无视图**——WAL 记 recompile(old_spec)/ab 落选（console.py:397/932），但 gn_verify 只回 ok+summary+suggestions，无"被丢弃候选的集合视图与共性解读" | gn_artifact 加 evidence 模式（失败分支 GN 状态/被否决 patch/忽略警告的考古查询）时销单 |
+| W-11 | ~~失败工件考古接口缺失~~ **基础版销单（2026-09-29）**：console.archaeology()——遍历 WAL 收集 recompile/drop_segment/drop_part/override，按 seg 分组统计高危区（确定性共性解读）；真机实证 1 件丢弃物→高危区 [('B',1)]。**遗留**：失败分支 GN 状态快照（重量级）待 gn_artifact 扩展 |
 | ~~W-12~~ | ~~owner-session 与无主工件防毒~~ | **已销单（2026-09-29）**：ExperienceEntry.owner 字段 + record_ai/record_override 自动落账（ai:ai-channel / user-override）+ recall 防毒过滤器（无主件不可召回）+ from_dict 迁移（存量 → legacy:pre-W12 有主）；test_experience [7c] 4 断言（54/54）。安全属性落地 |
 | W-13 | **引用债/互惠网络**（Orr 互惠伦理：借件代接工单，团队共担责任）：多会话场景下 B 会话被 A 的 verified_failure 救过，B 的失败叙事应享优先晋升评审——让故事形成互助网 | 与 W-9 共用引用图；多会话运行时上线才有意义 |
-| W-14 | **plan 修订未入库为一级事件**（Suchman：计划是资源不是脚本——哲学底座）：意图 patch 已可改写计划，但每次 plan 修订本身没有作为 war story 入库；下次检索学不到"什么情况下计划容易被改、改成什么样" | plan 修订事件进 experience 通道时销单 |
+| W-14 | ~~plan 修订未入库为一级事件~~ **通道版销单（2026-09-29）**：console.note_plan_revision(reason, seg) → record_experience（kind=plan_revision，draft 晋升过人）；真机实证入库+recall 反哺命中（owner=ai:ai-channel）。**遗留**：视觉环自动触发（patch 即调）待导演模式接线 |
 
 > **重复挂单防护（2026-09-29 核对实录）**：Orr/PARC 学派那一批吸收件（故事地位经济学／共享词汇卡／垃圾桶原则／领地与孤机／互惠网络／Suchman 哲学底座）**已在案为 W-9~W-14 + ⑨b**；同日另有一份同源分析（追溯到同一批原著）若再次流入，**只许补增量、不许另起编号**。
 >

@@ -973,6 +973,52 @@ class Console:
         return self._ok("record_experience", f"经验入库 eid={r[:12]}…",
                         data={"eid": r})
 
+    # ── W-11/W-14：垃圾桶考古 + plan 修订入库（2026-09-29）────
+    def archaeology(self) -> dict[str, Any]:
+        """垃圾桶考古（W-11 基础版，Orr：老技师先翻废纸篓解读坏件共性）。
+
+        WAL 里"有痕无视图"的丢弃物收集：recompile（旧指纹被替代）/
+        drop_segment / drop_part / override。共性解读 = 按 seg 分组计数
+        （确定性统计，不装 AI）。重复被丢的段 = 高危区，供看图改优先复盘。
+        """
+        buckets: dict[str, list[dict[str, Any]]] = {}
+        by_seg: dict[str, int] = {}
+        for ev in self.wal.replay():
+            kind = ev.get("kind")
+            if kind in ("recompile", "drop_segment", "drop_part", "override"):
+                seg = (ev.get("payload") or {}).get("seg", "") or \
+                      (ev.get("payload") or {}).get("part", "") or "?"
+                buckets.setdefault(kind, []).append(ev)
+                if kind != "override":
+                    by_seg[seg] = by_seg.get(seg, 0) + 1
+        hot = sorted(by_seg.items(), key=lambda t: -t[1])
+        return self._ok("archaeology",
+                        f"垃圾桶：{sum(len(v) for v in buckets.values())} 件丢弃物，"
+                        f"高危区 {hot[:3]}",
+                        data={"discards": {k: len(v) for k, v in buckets.items()},
+                              "by_seg": by_seg,
+                              "detail": buckets})
+
+    def note_plan_revision(self, reason: str, seg: str = "",
+                           changed: bool = True) -> Any:
+        """W-14（Suchman：计划是资源不是脚本）：plan 修订入库为一级事件。
+
+        调用方（视觉环/导演/E2E）在 plan 被改写后显式调用——下次检索
+        能学到"什么情况下计划容易被改、改成什么样"。库未激活 → 结构化
+        skip（不谎报）。"""
+        if self.library is None:
+            return self._err("note_plan_revision", "LIBRARY_NOT_BOUND", seg,
+                             "经验库未绑定（用 attach_experience 启用）")
+        return self.record_experience({
+            "trigger": {"origin": "logic_tree", "kind": "plan_revision",
+                        "seg": seg or "?", "project": "plan-revision"},
+            "attention": f"计划被改写：{reason[:60]}",
+            "story": f"plan 修订（seg={seg or '?'}，几何变化={changed}）：{reason}",
+            "params": {"changed": 1.0 if changed else 0.0},
+            "evidence": [{"artifact": "console.plan",
+                          "quote": reason[:120],
+                          "recalc": "grep 'param\\|recompile' events.jsonl"}]})
+
     # ── 状态导出（M9-4a）─────────────────────────────────────
     def export_state(self) -> ConsoleResult:
         st = export_state(self.dag, self.table, self.vparams, self.commits,
