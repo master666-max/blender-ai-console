@@ -475,9 +475,9 @@ graph TB
 | W-7 | **commits.commit 主链路未接线**：SegmentCommits.commit（m1_core.py:566）存在但 console.py 从不调用；段交付的 commit 账本只在 export_state 被读 | console 段 passed 后接 commits.commit 时销单 |
 | W-8 | **blocked 幽灵状态**：logic_tree.STATUSES 含 blocked，但代码无任何转移将其置位（④ 的两条 blocked 入边在代码不存在） | 补置位逻辑（deps failed 时 next_ready 拒绝并置 blocked）或删状态时销单 |
 | W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量，不由撰写者自述）：provenance.reused/reuse_success 字段已存在（experience.py:90/333），但①recall 命中→自动 mark_reuse 的闭环缺失（靠外部显式调用）、②存活率→撰写 agent 评分信号缺失 | recall 自动计数闭环 + 评分信号上线时销单；与 W-13 共用引用图；**并须与 W-6 对齐**——存活率索引应登记为"四层索引"中的一层，两条挂单不得各自演化 |
-| W-10 | **共享词汇卡未提供**（Orr"把用户引入话语社群"的后半句）：ask_round 提问卡有 default/why（intake.py:41-45），但不告诉用户系统可解析哪些词（segment/gate/G1/blockout）——用户反馈用系统词汇，视觉环 patch 解析率直接受益 | ask_round 输出加词汇页时销单；零新模块 |
+| ~~W-10~~ | ~~共享词汇卡未提供~~ | **已销单（2026-09-29）**：intake.py `vocab_card()` 挂在 ask_round 卡上——11 词条（segment/gate/G1/blockout/tier/set_param/patch/GoodPoint/revert/verified_failure/draft-promote），test_intake 22/22 |
 | W-11 | **失败工件考古接口缺失**（Orr 垃圾桶原则：老技师先翻废纸篓解读坏件共性）：中间产物**有痕无视图**——WAL 记 recompile(old_spec)/ab 落选（console.py:397/932），但 gn_verify 只回 ok+summary+suggestions，无"被丢弃候选的集合视图与共性解读" | gn_artifact 加 evidence 模式（失败分支 GN 状态/被否决 patch/忽略警告的考古查询）时销单 |
-| W-12 | **owner-session 与无主工件防毒**（Orr 领地与孤机：无主机器"浑身芒刺"；社会损害不可回滚）：ExperienceEntry 无 owner 字段（grep 零命中实锤）；无主工件（如 escape.py 零调用方=W-4）可进 recall 语料——坏故事晋升会污染所有后续会话，WAL 能回滚现场、回滚不了被污染的检索 | 数据模型加 owner-session 字段 + recall 过滤无主件时销单；安全属性，优先级高于 W-9/W-13 |
+| ~~W-12~~ | ~~owner-session 与无主工件防毒~~ | **已销单（2026-09-29）**：ExperienceEntry.owner 字段 + record_ai/record_override 自动落账（ai:ai-channel / user-override）+ recall 防毒过滤器（无主件不可召回）+ from_dict 迁移（存量 → legacy:pre-W12 有主）；test_experience [7c] 4 断言（54/54）。安全属性落地 |
 | W-13 | **引用债/互惠网络**（Orr 互惠伦理：借件代接工单，团队共担责任）：多会话场景下 B 会话被 A 的 verified_failure 救过，B 的失败叙事应享优先晋升评审——让故事形成互助网 | 与 W-9 共用引用图；多会话运行时上线才有意义 |
 | W-14 | **plan 修订未入库为一级事件**（Suchman：计划是资源不是脚本——哲学底座）：意图 patch 已可改写计划，但每次 plan 修订本身没有作为 war story 入库；下次检索学不到"什么情况下计划容易被改、改成什么样" | plan 修订事件进 experience 通道时销单 |
 

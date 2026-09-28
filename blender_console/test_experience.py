@@ -88,7 +88,8 @@ try:
     check("空库召回 = 空列表", lambda: got1, [])
     got_single = ExperienceLibrary(tmp / "one.jsonl")
     got_single.add(ExperienceEntry(trigger={"a": 1}, attention="x", story="y",
-                                   status="verified", evidence=EV))
+                                   status="verified", evidence=EV),
+                  author="test")          # W-12：带主件才可召回（无主件防毒过滤）
     check("单条库召回退化为 1 条（无法凭空造第二条）",
           lambda: len(got_single.recall({"a": 1})), 1)
     check("outcome 标记保留",
@@ -287,6 +288,27 @@ try:
     lib4.mark_reuse(ok_eid, success=False, had_variant=False)
     check("mark_reuse：unverified 衰减 ×0.8（对照组）",
           lambda: lib4.entries[ok_eid].weight, round(before_u * 0.8, 4))
+
+    # ── [7c] W-12 owner 防毒（Orr 孤机：无主件不进召回）─────────
+    print("\n[7c] W-12 owner 防毒")
+    lib5 = ExperienceLibrary(tmp / "lib5.jsonl")
+    o1 = lib5.record_ai(trigger={"proj": "w12"}, attention="有主件", story="s",
+                        evidence=EV)
+    check("record_ai 自动落 owner=ai:ai-channel",
+          lambda: lib5.entries[o1].owner, "ai:ai-channel")
+    ov1 = lib5.record_override(trigger={"proj": "w12"}, note="人工打回")
+    check("record_override 自动落 owner=user-override",
+          lambda: lib5.entries[ov1].owner, "user-override")
+    lib5.add(ExperienceEntry(trigger={"proj": "w12"}, attention="无主毒件",
+                             story="poison"))    # 低层 add 无 author → 无主
+    got5 = lib5.recall({"proj": "w12"}, include_draft=True)
+    check("无主件被 recall 防毒过滤（有主 2 条在、毒件不在）",
+          lambda: (len(got5), all(e.owner for e in got5)), (2, True))
+    # 存量迁移：旧条目 owner 缺失 → legacy 有主
+    old = ExperienceEntry.from_dict({"trigger": {"a": 1}, "attention": "旧",
+                                     "story": "s"})
+    check("from_dict 迁移：owner 缺失 → legacy:pre-W12",
+          lambda: old.owner, "legacy:pre-W12")
 
     # ── 汇总 ────────────────────────────────────────────────────
     failed = [r for r in ROWS if not r["ok"]]

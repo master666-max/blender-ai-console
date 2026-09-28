@@ -164,8 +164,27 @@ class IntakeSession:
                          "questions": [{k: v for k, v in q.items() if k != "domain"}
                                        for q in qs],
                          "note": "可逐问回答，或回「按默认」整体跳过；说「开工」立即冻结"}}
+        card["data"]["vocab"] = self.vocab_card()   # W-10：把用户引入话语社群
         self.log.append({"round": self.round, "asked": [q["field"] for q in qs]})
         return card
+
+    def vocab_card(self) -> dict[str, str]:
+        """W-10（2026-09-29，Orr"把用户引入话语社群"后半句）：共享词汇卡——
+        明确告诉用户系统能解析哪些词，后续反馈用这套词，视觉环 patch
+        解析率直接受益。零新模块：静态卡片挂在提问卡上。"""
+        return {
+            "segment": "段落：一个可独立编译的几何部件（如 杯身/把手），有 id",
+            "gate": "门禁：段落/树节点的验收判据（machine=机验数值，visual=目验）",
+            "G1": "铁门禁：blockout 层剪影/比例必须人审定（AI 不可自宣）",
+            "blockout": "块坯层：deps 深度 0 的底层结构段（先立轮廓后细节）",
+            "tier": "节点档位 1|2|3：tier1 判据不可降格，tier2 默认打法，tier3 条件表",
+            "set_param": "改参数：set_param(段, 参数名, 新值)——改后渲染 diff 可见",
+            "patch": "意图补丁：看图后的一处修改指令 {node_id, field, new_value}",
+            "GoodPoint": "检查点：当前状态快照，可随时回退（revert）到它",
+            "revert / pop": "回退：revert=回检查点；pop=撤掉最后一段",
+            "verified_failure": "已验证的失败：门禁判定的失败教训，入经验库不衰减",
+            "draft / promote": "草稿→晋升：AI 写的经验是人门草稿，人审定后才转正",
+        }
 
     # ── 回答提交（翻牌制）────────────────────────────────────
     def submit(self, answers: dict[str, Any]) -> dict[str, Any]:

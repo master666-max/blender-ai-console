@@ -91,12 +91,19 @@ class ExperienceEntry:
     })
     weight: float = 1.0                # 降权系数落在这里（差异化衰减，见 mark_reuse）
     eid: str = ""                      # 内容寻址（add 时自动算）
+    owner: str = ""                    # W-12（Orr 领地与孤机）：归属会话/人——
+                                       #   "ai:ai-channel" / "user-override" /
+                                       #   "legacy:pre-W12"（存量语料迁移）。
+                                       #   空 = 无主件，recall 防毒过滤器跳过
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "ExperienceEntry":
+        # W-12 迁移（2026-09-29）：存量语料 owner 缺失 → "legacy:pre-W12"
+        # （视为社区公共知识，有主——不被 recall 防毒过滤器误伤）
+        owner = d.get("owner") or "legacy:pre-W12"
         return cls(
             trigger=d.get("trigger", {}),
             attention=d.get("attention", ""),
@@ -111,7 +118,8 @@ class ExperienceEntry:
                 "author": "", "source": "", "created": "",
                 "reused": 0, "reuse_success": 0, "variants": 0},
             weight=float(d.get("weight", 1.0)),
-            eid=d.get("eid", ""))
+            eid=d.get("eid", ""),
+            owner=owner)
 
     def content_eid(self) -> str:
         blob = json.dumps({"t": self.trigger, "a": self.attention,
@@ -300,6 +308,12 @@ class ExperienceLibrary:
             p["source"] = source
         if not p.get("created"):
             p["created"] = now
+        # W-12（2026-09-29）：归属自动落账——写入通道（record_ai/record_override）
+        # 的 author 即 owner；低层 add 无 author 时保持空 = 无主件
+        # （recall 防毒过滤器跳过，见 recall）。
+        if not entry.owner and author:
+            entry.owner = (author if ":" in author
+                           else "ai:ai-channel" if author == "ai" else author)
         if entry.eid in self.entries:          # 幂等（内容寻址去重）
             return entry.eid
         self.entries[entry.eid] = entry
@@ -323,6 +337,9 @@ class ExperienceLibrary:
                 continue
             if e.status == "draft" and not include_draft:
                 continue
+            if not e.owner:
+                continue          # W-12 防毒（Orr 孤机）：无主件不进召回——
+                                  # WAL 能回滚现场，回滚不了被污染的检索
             hit = sum(1 for k, v in query.items() if e.trigger.get(k) == v)
             match = hit / len(query) if query else 0.5
             w = e.weight * (0.5 if e.status == "draft" else 1.0)
