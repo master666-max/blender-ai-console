@@ -137,10 +137,11 @@ for side in (-1, 1):
     y_c = side * TRACK_Y
     for i in range(8):
         x = -at35(2700) / 2 + i * (at35(2700) / 7) + (at35(55) if side < 0 else -at35(55))
+        y_off = y_c + side * (at35(60) if i % 2 else -at35(60))   # 内外交错
         cyl("rw_rim_%s%d" % (side, i), WR, at35(60),
-            (x, y_c, WHEEL_Z), rot=(0, radians(90), 0), verts=24, mat=M_ARMOR)
+            (x, y_off, WHEEL_Z), rot=(0, radians(90), 0), verts=24, mat=M_ARMOR)
         cyl("rw_hub_%s%d" % (side, i), WR * 0.58, at35(130),
-            (x, y_c + side * at35(25), WHEEL_Z), rot=(0, radians(90), 0),
+            (x, y_off + side * at35(25), WHEEL_Z), rot=(0, radians(90), 0),
             verts=16, mat=M_DARK)
 for s in (-1, 1):
     cyl("drive_%d" % s, at35(580), at35(90),
@@ -149,8 +150,8 @@ for s in (-1, 1):
         (-at35(2850), s * TRACK_Y, at35(500)), rot=(0, radians(90), 0), verts=18, mat=M_DARK)
 
 mark("1.3", "44 shoes/side")
-A_X, B_Z = at35(3100), at35(820)
-CZ = at35(520) + at35(180)
+A_X, B_Z = at35(3100), at35(650)
+CZ = at35(730)
 N_SHOES = 44
 for side in (-1, 1):
     y_c = side * TRACK_Y
@@ -158,11 +159,9 @@ for side in (-1, 1):
         th = 2 * pi * i / N_SHOES
         x = A_X * cos(th)
         z = CZ + B_Z * sin(th)
-        ang = math.atan2(B_Z * cos(th), A_X * sin(th))
-        if sin(th) < 0:
-            ang += pi
+        ang = math.atan2(-B_Z * cos(th), -A_X * sin(th))   # 切线贴合：底/顶水平、前后竖直
         box("shoe_%s%02d" % (side, i), at35(150), at35(725), at35(95),
-            (x, y_c, z), M_TRACK, rot=(0, -ang + pi / 2, 0))
+            (x, y_c, z), M_TRACK, rot=(0, ang, 0))
 
 print("[build] [1.3-fenders] fenders")  # 非树内节点（挡泥板属 1.3 附属）
 for s in (-1, 1):
@@ -188,7 +187,10 @@ TUR_Z0 = DECK
 TUR_H = at35(2880) - DECK - at35(150)
 TUR_D = at35(2080)
 TUR_X = at35(200)
-cyl("tiger_turret", TUR_D, TUR_H, (TUR_X, 0, TUR_Z0 + TUR_H / 2), verts=24, mat=M_ARMOR)
+_turret = cyl("tiger_turret", TUR_D, TUR_H, (TUR_X, 0, TUR_Z0 + TUR_H / 2), verts=24, mat=M_ARMOR)
+_bev = _turret.modifiers.new("bevel", 'BEVEL')
+_bev.width = 0.004
+_bev.segments = 3
 box("turret_front", at35(250), at35(1850), TUR_H,
     (TUR_X + TUR_D / 2 - at35(60), 0, TUR_Z0 + TUR_H / 2), M_ARMOR)
 box("turret_bustle", at35(600), at35(1700), TUR_H * 0.9,
@@ -218,7 +220,7 @@ cyl("mg34_port", at35(130), at35(90),
 
 mark("2.4", "x2")
 cyl("hatch_cmd", at35(580), at35(70),
-    (TUR_X - TUR_D / 2 + at35(420), -at35(380), TUR_Z0 + TUR_H + at35(255)),
+    (TUR_X - TUR_D / 2 + at35(420), -at35(380), TUR_Z0 + TUR_H + at35(150)),
     verts=18, mat=M_ARMOR)
 box("hatch_loader", at35(420), at35(380), at35(70),
     (TUR_X + at35(650), at35(380), TUR_Z0 + TUR_H + at35(35)), M_ARMOR)
