@@ -69,29 +69,29 @@ def plane(name, sx, sy, loc, m, rot=(0, 0, 0)):
     o.data.materials.append(m)
     return o
 
-# ── 材质（收敛 18 种）───────────────────────────────────────
-M_BASE  = mat("MAT_Base",   (0.22, 0.23, 0.26), 0.45)
-M_ROAD  = mat("MAT_Road",   (0.13, 0.14, 0.17), 0.28, 0.32)
-M_WET   = mat("MAT_Wet",    (0.06, 0.08, 0.12), 0.05, 0.70)
-M_SIDE  = mat("MAT_Side",   (0.46, 0.48, 0.52), 0.85)
-M_CURB  = mat("MAT_Curb",   (0.56, 0.58, 0.61), 0.8)
-M_WALL  = mat("MAT_Wall",   (0.62, 0.66, 0.72), 0.65)
-M_TRIM  = mat("MAT_Trim",   (0.20, 0.22, 0.26), 0.5, 0.3)
-M_GLASS = mat("MAT_Glass",  (0.60, 0.78, 0.88), 0.04, alpha=0.30)
-M_DOOR  = mat("MAT_Door",   (0.62, 0.80, 0.88), 0.04, alpha=0.40)
-M_FLOOR = mat("MAT_Floor",  (0.93, 0.90, 0.83), 0.6)
-M_WHITE = mat("MAT_White",  (0.92, 0.92, 0.94), 0.45)
-M_DARK  = mat("MAT_Dark",   (0.09, 0.09, 0.11), 0.7)
-M_POLE  = mat("MAT_Pole",   (0.30, 0.33, 0.37), 0.45, 0.5)
-M_METAL = mat("MAT_Metal",  (0.60, 0.63, 0.66), 0.3, 0.7)
-M_WARM  = mat("MAT_Warm",   (1, 1, 1), 0.4, emit=(1.0, 0.72, 0.38), es=2.6)
-M_SIGN  = mat("MAT_Sign",   (1, 1, 1), 0.4, emit=(1.0, 0.32, 0.48), es=2.4)   # 品红主招
-M_SIGN2 = mat("MAT_Sign2",  (1, 1, 1), 0.4, emit=(0.35, 0.85, 1.0), es=2.2)   # 青
-M_VEND  = mat("MAT_Vend",   (1, 1, 1), 0.35, emit=(0.95, 0.55, 0.15), es=2.0)  # 钠橙
-M_BAND  = mat("MAT_Band",   (1, 1, 1), 0.4, emit=(0.95, 0.78, 0.52), es=1.4)   # 商品带
-M_ZEBRA = mat("MAT_Zebra",  (0.75, 0.78, 0.82), 0.3, 0.2)
-M_UMB   = mat("MAT_Umb",    (0.80, 0.28, 0.34), 0.5)
-M_GRN   = mat("MAT_GRN",    (0.16, 0.34, 0.22), 0.8)
+# ── 材质（#1 色板纪律：夜蓝紫底 / 暖橙光 / 品红招 / 青 vending / 沥青黑 / 玻璃青）
+M_BASE  = mat("MAT_Base",   (0.13, 0.14, 0.19), 0.5)                    # 夜蓝紫底座
+M_ROAD  = mat("MAT_Road",   (0.08, 0.09, 0.13), 0.25, 0.35)             # 沥青黑
+M_WET   = mat("MAT_Wet",    (0.05, 0.07, 0.11), 0.04, 0.75)             # 镜面积水
+M_SIDE  = mat("MAT_Side",   (0.28, 0.30, 0.38), 0.85)                   # 冷灰人行道
+M_CURB  = mat("MAT_Curb",   (0.36, 0.39, 0.46), 0.8)
+M_WALL  = mat("MAT_Wall",   (0.30, 0.34, 0.44), 0.65)                   # 店墙夜蓝灰
+M_TRIM  = mat("MAT_Trim",   (0.13, 0.15, 0.19), 0.5, 0.3)
+M_GLASS = mat("MAT_Glass",  (0.45, 0.68, 0.85), 0.04, alpha=0.28)       # 玻璃青
+M_DOOR  = mat("MAT_Door",   (0.48, 0.72, 0.86), 0.04, alpha=0.38)
+M_FLOOR = mat("MAT_Floor",  (0.85, 0.72, 0.55), 0.6)                    # 店内暖米
+M_WHITE = mat("MAT_White",  (0.80, 0.78, 0.74), 0.45)
+M_DARK  = mat("MAT_Dark",   (0.05, 0.05, 0.07), 0.7)
+M_POLE  = mat("MAT_Pole",   (0.18, 0.20, 0.24), 0.45, 0.5)
+M_METAL = mat("MAT_Metal",  (0.40, 0.44, 0.50), 0.3, 0.7)
+M_WARM  = mat("MAT_Warm",   (1, 1, 1), 0.4, emit=(1.0, 0.62, 0.25), es=2.6)   # 暖橙焦点
+M_SIGN  = mat("MAT_Sign",   (1, 1, 1), 0.4, emit=(1.0, 0.18, 0.42), es=2.8)   # 品红焦点
+M_SIGN2 = mat("MAT_Sign2",  (1, 1, 1), 0.4, emit=(0.15, 0.75, 1.0), es=2.2)   # 青焦点
+M_VEND  = mat("MAT_Vend",   (1, 1, 1), 0.35, emit=(0.95, 0.50, 0.12), es=2.0)  # 钠橙
+M_BAND  = mat("MAT_Band",   (1, 1, 1), 0.4, emit=(1.0, 0.70, 0.40), es=1.5)   # 商品带（暖）
+M_ZEBRA = mat("MAT_Zebra",  (0.55, 0.58, 0.64), 0.3, 0.2)
+M_UMB   = mat("MAT_Umb",    (0.75, 0.20, 0.28), 0.5)                    # 品红系伞
+M_GRN   = mat("MAT_GRN",    (0.10, 0.22, 0.16), 0.8)
 
 # ── 底座 ────────────────────────────────────────────────────
 box("Base", (2.4, 2.4, 0.15), (0, 0, -0.075), M_BASE, bevel=0.02)
@@ -107,6 +107,22 @@ for i in range(5):
     plane(f"Z{i}", 0.10, 0.52, (-0.70 + i*0.26, -0.77, 0.004), M_ZEBRA)
 plane("Cline", 2.3, 0.028, (0, -0.77, 0.004), M_ZEBRA)
 plane("WetZ", 0.85, 0.5, (-0.35, -0.77, 0.005), M_WET)
+
+# ── #3 湿反光竖条（动画夜雨标志性笔触：每个光源倒影一根拉长亮条）──
+plane("ReflLamp", 0.10, 0.85, (1.10, -1.02, 0.006), M_WARM, rot=(math.pi/2, 0, 0.06))
+plane("ReflVend", 0.09, 0.55, (1.09, -0.45, 0.006), M_WARM, rot=(math.pi/2, 0, 0))
+plane("ReflSign", 0.12, 0.40, (-0.10, -0.62, 0.006),
+      mat("MAT_ReflSign", (1,1,1), 0.1, 0.6, emit=(1.0, 0.30, 0.45), es=0.9),
+      rot=(math.pi/2, 0, 0))
+# ── #6 前景遮挡：一把撑开的伞（近景，微微入画）──
+cyl("FgUmbPole", 0.012, 0.85, (-1.35, -1.35, 0.85), M_DARK, rot=(0.16, -0.10, 0))
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.42, location=(-1.30, -1.32, 1.22),
+                                     segments=24, ring_count=12)
+fu = bpy.context.active_object; fu.name = "FgUmbrella"
+fu.scale = (1.0, 1.0, 0.55)
+fu.data.materials.append(M_UMB)
+bev(fu, 0.01)
+cyl("FgUmbTip", 0.008, 0.10, (-1.30, -1.32, 1.48), M_DARK)
 
 # ── 便利店主体 ──────────────────────────────────────────────
 BX, BY = -0.02, 0.62
@@ -203,7 +219,7 @@ box("RLb", (0.01, 0.48, 0.014), (1.17, -0.51, 0.27), M_POLE)
 S.world = bpy.data.worlds.new("N")
 S.world.use_nodes = True
 bg = S.world.node_tree.nodes["Background"]
-bg.inputs[0].default_value = (0.012, 0.016, 0.032, 1)
+bg.inputs[0].default_value = (0.006, 0.008, 0.018, 1)
 bg.inputs[1].default_value = 1.0
 
 def light(name, tp, loc, e, c, size=0.4):
@@ -213,14 +229,14 @@ def light(name, tp, loc, e, c, size=0.4):
     o = bpy.data.objects.new(name, d); o.location = loc
     bpy.context.collection.objects.link(o)
 
-light("W1", 'AREA', (BX-0.5, BY+0.05, 1.83), 55, (1.0, 0.76, 0.46), 0.6)
-light("W2", 'AREA', (BX+0.45, BY+0.05, 1.83), 55, (1.0, 0.76, 0.46), 0.6)
+light("W1", 'AREA', (BX-0.5, BY+0.05, 1.83), 85, (1.0, 0.76, 0.46), 0.6)
+light("W2", 'AREA', (BX+0.45, BY+0.05, 1.83), 85, (1.0, 0.76, 0.46), 0.6)
 light("W3", 'AREA', (BX, BY-0.25, 1.55), 18, (1.0, 0.80, 0.55), 0.8)
 light("Sign", 'POINT', (BX, BY-0.25, 2.15), 18, (1.0, 0.45, 0.55))
 light("Vend", 'POINT', (1.09, -0.15, 0.65), 8, (0.7, 0.75, 1.0))
 light("Lmp", 'POINT', (1.28, -1.08, 1.42), 12, (1.0, 0.72, 0.40))
 light("Fill", 'AREA', (0.30, -2.60, 1.75), 14, (0.55, 0.62, 0.85), 2.2)
-md = bpy.data.lights.new("Moon", 'SUN'); md.energy = 0.5
+md = bpy.data.lights.new("Moon", 'SUN'); md.energy = 0.25
 md.color = (0.55, 0.66, 0.95)
 mo = bpy.data.objects.new("Moon", md)
 mo.rotation_euler = (math.radians(55), 0, math.radians(-25))
@@ -229,9 +245,9 @@ bpy.context.collection.objects.link(mo)
 # ── 相机 ────────────────────────────────────────────────────
 cam_d = bpy.data.cameras.new("C"); cam = bpy.data.objects.new("C", cam_d)
 bpy.context.collection.objects.link(cam)
-cam.location = (0.30, -3.35, 1.70)
+cam.location = (2.75, -2.75, 2.55)
 cam_d.lens = 38
-tgt = bpy.data.objects.new("T", None); tgt.location = (0.0, 0.15, 0.85)
+tgt = bpy.data.objects.new("T", None); tgt.location = (-0.15, 0.25, 0.65)
 bpy.context.collection.objects.link(tgt)
 c = cam.constraints.new('TRACK_TO'); c.target = tgt
 c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
