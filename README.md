@@ -157,7 +157,7 @@ cd m9_web && node _selftest.mjs         # 42/42
 
 纯 Python 单测（无 bpy 依赖）：`python blender_console/test_upstream_store.py`
 
-**环境要求**：真机验收需 Blender 5.x（自带 Python ≥3.10）；纯单测与 Web 自检只需 Python 3.10+ / Node 18+。MCP 起桥入口：Windows `m8_bridge\start_gn_bridge.bat`，macOS/Linux `m8_bridge/start_gn_bridge.sh`——两者都会自动探测 Blender，找不到时设环境变量 `BLENDER_EXE` 指向可执行文件即可。
+**环境要求**：真机验收需 Blender 5.x（自带 Python ≥3.10）；纯单测与 Web 自检只需 Python 3.10+ / Node 18+。视觉多样性标定（M6-4 LPIPS）另需 `pip install torch torchvision lpips pillow numpy`（仅标定套件用，主链路不需要）。MCP 起桥入口：Windows `m8_bridge\start_gn_bridge.bat`，macOS/Linux `m8_bridge/start_gn_bridge.sh`——两者都会自动探测 Blender，找不到时设环境变量 `BLENDER_EXE` 指向可执行文件即可。
 
 跑通即验收——每套 `_live.py` 都在真实 Blender 5.2 会话里断言。全仓库路径均相对仓库根推导，不含任何机器相关的绝对路径；验收结果统一落盘到仓库内 `results/`。
 
@@ -235,6 +235,7 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**34 �
 ## 致谢
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)**（MIT，© 2025 Siddharth Ahuja）——传输层（沙箱 / 遥测 / 知情同意 / 配置模块）以 vendored 方式收录于 [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/)，并在其上扩展了 8 个 GN 工具绑定；原许可声明保留于该目录的 [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE)。
+- **思想参照**——[LightRAG](https://github.com/HKUDS/LightRAG)（HKUDS，EMNLP 2025 Findings）与 GraphRAG / LazyGraphRAG / HippoRAG：预调研图检索坐标系的改良参照，本项目"确定性建图 + LLM 补语义层"路线即是对"LightRAG 能用但别照抄"的回答；事件溯源 / CRDT 与混合主动交互（信任校准）同属预调研吸收的思想底座。
 - **[Blender](https://www.blender.org/)** 与 bpy 社区——一切运行其上的地基。
 
 ## License

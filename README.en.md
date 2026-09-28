@@ -157,7 +157,7 @@ cd m9_web && node _selftest.mjs         # 42/42
 
 Pure-Python unit tests (no bpy dependency): `python blender_console/test_upstream_store.py`
 
-**Requirements**: live acceptance needs Blender 5.x (bundled Python ≥3.10); pure unit tests and the web self-test only need Python 3.10+ / Node 18+. MCP bridge launchers: Windows `m8_bridge\start_gn_bridge.bat`, macOS/Linux `m8_bridge/start_gn_bridge.sh` — both auto-detect Blender; if not found, set the `BLENDER_EXE` environment variable to the executable.
+**Requirements**: live acceptance needs Blender 5.x (bundled Python ≥3.10); pure unit tests and the web self-test only need Python 3.10+ / Node 18+. Visual-diversity calibration (M6-4 LPIPS) additionally needs `pip install torch torchvision lpips pillow numpy` (calibration suites only; not required by the main pipeline). MCP bridge launchers: Windows `m8_bridge\start_gn_bridge.bat`, macOS/Linux `m8_bridge/start_gn_bridge.sh` — both auto-detect Blender; if not found, set the `BLENDER_EXE` environment variable to the executable.
 
 Passing these is the acceptance — every `_live.py` suite asserts inside a real Blender 5.2 session. All paths in the codebase are derived relative to the repo root; no machine-specific absolute paths anywhere, and acceptance results land in `results/` inside the repo.
 
@@ -235,6 +235,7 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 ## Acknowledgments
 
 - **[mcp-for-blender](https://github.com/ahujasid/blender-mcp)** (MIT, © 2025 Siddharth Ahuja) — the transport layer (sandbox, telemetry, consent and config modules) is vendored under [`m8_bridge/brickfly_mcp_src/`](m8_bridge/brickfly_mcp_src/) and extended with 8 GN tool bindings; its original license notice is preserved in that directory's [LICENSE](m8_bridge/brickfly_mcp_src/LICENSE).
+- **Intellectual references** — [LightRAG](https://github.com/HKUDS/LightRAG) (HKUDS, EMNLP 2025 Findings) together with GraphRAG / LazyGraphRAG / HippoRAG: the framing coordinates behind this project's "deterministic graph building + LLM semantic layer" route — the answer to "LightRAG works, but don't copy it verbatim". Event sourcing / CRDT and mixed-initiative interaction (trust calibration) form the rest of the pre-research intellectual substrate.
 - **[Blender](https://www.blender.org/)** and the bpy community — the substrate everything runs on.
 
 ## License
