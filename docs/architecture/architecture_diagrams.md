@@ -43,7 +43,7 @@ graph TB
         EXP["experience.py<br/>经验库（M6 ①）"]
         DIR["director.py<br/>导演模式（M7 ①）"]
         ESC["escape.py<br/>逃逸舱（M4-4 ①）<br/>⚠️ 当前零调用方"]
-        NLG["nlg_bands.py<br/>带化判词<br/>⚠️ 当前零调用方"]
+        NLG["nlg_bands.py<br/>带化判词（已接线）"]
     end
 
     subgraph BLENDER["Blender"]
@@ -136,7 +136,7 @@ graph LR
 
     subgraph VISUAL["视觉层"]
         RD["render_diff.py"]
-        NLG["nlg_bands.py<br/>⚠️ 零调用方"]
+        NLG["nlg_bands.py<br/>带化判词（console 已接线）"]
     end
 
     subgraph GOV["治理层"]
@@ -155,6 +155,7 @@ graph LR
     CONSOLE --> EXP
     CONSOLE --> PS
     CONSOLE --> RD
+    CONSOLE --> NLG
     OC --> MC
     PS --> OC
     DIR --> CONSOLE
@@ -336,7 +337,7 @@ graph TD
 
     subgraph VIS["视觉反馈环"]
         B1["渲染 diff PNG"] --> B2["谓词 diff JSON"]
-        B2 --> B3["NLG 带化判词<br/>⚠️ 设计位：nlg_bands 当前零调用方（挂单 W-1）"]
+        B2 --> B3["NLG 带化判词<br/>（console.render_diff 已接线 2026-09-29）"]
         B3 --> B4["LLM 看图+读报告"]
         B4 --> B5["意图 patch（node_id / field / new_value）"]
         B5 --> A2
@@ -446,7 +447,7 @@ graph TB
 
 | 挂单 | 内容 | 判据（何时销单） |
 |---|---|---|
-| W-1 | **nlg_bands 零调用方**：⑥ 视觉反馈环的 B3（NLG 带化判词）是设计位，代码里还没有 RD→NLG 的调用 | gn_verify/console import nlg_bands 并在 verify/render 后产判词时销单，图②⑥补实边 |
+| ~~W-1~~ | ~~nlg_bands 零调用方~~ | **已销单（2026-09-29）**：console.render_diff 接线 verdict_report（AST 实证 console import nlg_bands），E2E 九步链（e2e_live.py 11/11）判词驱动 patch 两轮收敛实证；图②⑥已补实边 |
 | W-2 | **两份 op 白名单**：plan_schema.SEGMENT_OPS（校验用）与 logic_tree.OP_TO_SEG（树→plan 映射用）各一份，漂移风险 | 合并为单一真源（logic_tree 从 plan_schema import）时销单 |
 | ~~W-3~~ | ~~Web 控制台 API 层缺失~~ | **已销单（2026-09-29）**：embedded_server.py 落地——HTTP daemon 线程 + 队列 + 主线程泵（GUI=bpy.app.timers / 后台脚本=manual pump 双模式）；api_revert_live.py 真机 14/14（state/checkpoint/revert/pop/drop_segment/verify/override/UNKNOWN_OP/静态伺服/无死锁）。销单动作：部署图 ⑦ 同步更新 |
 | W-4 | **escape 零调用方**：M4-4 逃逸舱是治理关键件但核心链路无人 import（设计上由 AI 会话层显式走） | AI 会话层接线 escape 通道时销单，图①②补实边 |

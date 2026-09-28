@@ -1,0 +1,277 @@
+{
+  "schema_version": "2.0",
+  "object": "mug_e2e",
+  "prompt": "350ml 经典陶瓷马克杯（E2E 全链路打样课题——九步链路验证用，v2.0 可编译 schema）",
+  "meta": {
+    "purpose": "E2E 九步链路（提需求→提问→逻辑树→计划→编译→验证→渲染对比→看图改→沉淀）的可编译最小树",
+    "reference_source": "电商实售规格（350ml / 高 95 口径 80 / 壁 5.5 / 含把宽 135-140）",
+    "units": "params_real 为 mm；build.params_mm 为场景米（mm/1000）",
+    "scale_factor": 1
+  },
+  "nodes": [
+    {
+      "id": "1.1",
+      "layer": "L1 容器",
+      "name": "杯身（锥台）",
+      "tier": 1,
+      "status": "pending",
+      "deps": [],
+      "build": {
+        "op": "revolve_profile",
+        "params_real": {
+          "height_mm": 95,
+          "dia_top_mm": 80,
+          "dia_bottom_mm": 68
+        },
+        "params_mm": {
+          "Radius_Top": 0.04,
+          "Radius_Bottom": 0.034,
+          "Depth": 0.095
+        }
+      },
+      "parameters": [
+        {
+          "name": "Radius_Top",
+          "type": "FLOAT",
+          "value": 0.04,
+          "min": 0.03,
+          "max": 0.05
+        },
+        {
+          "name": "Radius_Bottom",
+          "type": "FLOAT",
+          "value": 0.034,
+          "min": 0.025,
+          "max": 0.045
+        },
+        {
+          "name": "Depth",
+          "type": "FLOAT",
+          "value": 0.095,
+          "min": 0.07,
+          "max": 0.12
+        }
+      ],
+      "gate": {
+        "machine_spec": {
+          "expr": "bbox_xyz",
+          "ref": "reference",
+          "checks": {
+            "height_mm": [
+              90,
+              100
+            ],
+            "ratio_height_dia": [
+              1.05,
+              1.3
+            ]
+          }
+        },
+        "visual": "剪影即马克杯（G1 铁门禁）"
+      }
+    },
+    {
+      "id": "1.2",
+      "layer": "L1 容器",
+      "name": "内腔（能盛水）",
+      "tier": 2,
+      "status": "pending",
+      "deps": [
+        "1.1"
+      ],
+      "build": {
+        "op": "boolean_diff",
+        "params_real": {
+          "wall_mm": 5.0,
+          "cavity_depth_mm": 86
+        },
+        "params_mm": {
+          "Cavity_R_Top": 0.035,
+          "Cavity_R_Bottom": 0.029,
+          "Cavity_Depth": 0.086
+        }
+      },
+      "operand": {
+        "op": "transform",
+        "translation": [
+          0,
+          0,
+          0.0045
+        ],
+        "source": {
+          "op": "revolve_profile",
+          "radius_top": 0.035,
+          "radius_bottom": 0.029,
+          "depth": 0.086
+        }
+      },
+      "gate": {
+        "machine_spec": {
+          "expr": "wall_thickness",
+          "ref": "reference",
+          "checks": {
+            "wall_mm": [
+              4,
+              7
+            ]
+          }
+        },
+        "visual": "口沿下内壁无穿帮破面"
+      }
+    },
+    {
+      "id": "2.1",
+      "layer": "L2 人机",
+      "name": "把手（侧贴环）",
+      "tier": 2,
+      "status": "pending",
+      "deps": [
+        "1.2"
+      ],
+      "build": {
+        "op": "join_geometry",
+        "params_real": {
+          "handle_ring_radius_mm": 21,
+          "strap_mm": 14,
+          "center_x_mm": 58
+        },
+        "params_mm": {
+          "Center_X": 0.058
+        }
+      },
+      "parameters": [
+        {
+          "name": "Center_X",
+          "type": "FLOAT",
+          "value": 0.058,
+          "min": 0.05,
+          "max": 0.068
+        }
+      ],
+      "operand": {
+        "op": "transform",
+        "translation": [
+          0.058,
+          0,
+          0
+        ],
+        "rotation_deg": [
+          0,
+          90,
+          0
+        ],
+        "source": {
+          "op": "sweep_circle",
+          "ring_radius": 0.021,
+          "thickness": 0.007
+        }
+      },
+      "gate": {
+        "machine_spec": {
+          "expr": "bbox_xyz",
+          "ref": "reference",
+          "checks": {
+            "handle_total_width_mm": [
+              125,
+              150
+            ]
+          }
+        },
+        "visual": "三指可穿，外凸不碍掌"
+      }
+    },
+    {
+      "id": "3.1",
+      "layer": "L3 形态",
+      "name": "整体比例门",
+      "tier": 1,
+      "status": "pending",
+      "deps": [
+        "1.1"
+      ],
+      "build": {
+        "op": "proportion_check",
+        "params_real": {
+          "height_mm": 95,
+          "dia_mm": 80
+        }
+      },
+      "gate": {
+        "machine_spec": {
+          "expr": "ratio_height_dia",
+          "ref": "reference",
+          "checks": {
+            "ratio_height_dia": [
+              1.05,
+              1.3
+            ]
+          }
+        },
+        "visual": "剪影可辨认（G1 目验门）"
+      }
+    },
+    {
+      "id": "4.1",
+      "layer": "L4 呈现",
+      "name": "白瓷釉面",
+      "tier": 2,
+      "status": "pending",
+      "deps": [
+        "2.1"
+      ],
+      "build": {
+        "op": "set_material",
+        "params_real": {
+          "roughness": 0.32
+        }
+      },
+      "material_plan": {
+        "preset": "ceramic",
+        "surface": {
+          "roughness": 0.32
+        }
+      },
+      "gate": {
+        "machine_spec": {},
+        "visual": "高光带连续不塑料"
+      }
+    },
+    {
+      "id": "5.1",
+      "layer": "L5 展示",
+      "name": "展台",
+      "tier": 3,
+      "status": "pending",
+      "deps": [
+        "2.1",
+        "4.1"
+      ],
+      "build": {
+        "op": "join_geometry",
+        "params_real": {
+          "base_mm": [
+            220,
+            160,
+            12
+          ]
+        }
+      },
+      "operand": {
+        "op": "transform",
+        "translation": [
+          0,
+          0,
+          -0.006
+        ],
+        "source": {
+          "op": "cube",
+          "size": [
+            0.22,
+            0.16,
+            0.012
+          ]
+        }
+      }
+    }
+  ]
+}

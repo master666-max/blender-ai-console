@@ -101,6 +101,8 @@ def _need_src(op: str, src) -> tuple:
 # ─────────────────────────────────────────────────────────────
 _A = {
     "radius": ["Radius", "Body_Radius", "R", "Size_Radius"],
+    "radius_top": ["Radius_Top", "Radius Top", "Top_Radius", "R_Top"],
+    "radius_bottom": ["Radius_Bottom", "Radius Bottom", "Bottom_Radius", "R_Bottom"],
     "depth": ["Depth", "Height", "Body_Depth", "H"],
     "vertices": ["Vertices", "Segments_Circle"],
     "size": ["Size", "Cube_Size"],
@@ -401,12 +403,20 @@ def _op_array_radial(ad, tree, sid, spec, src):
 
 
 def _op_revolve_profile(ad, tree, sid, spec, src):
-    """旋转轮廓近似：MeshCone（Radius Top/Bottom/Depth）——任意轮廓 M4-11 后续（近似如实标注）。"""
+    """旋转轮廓近似：MeshCone（Radius Top/Bottom/Depth）——任意轮廓 M4-11 后续（近似如实标注）。
+
+    2026-09-29 真机探针修复：此前只 _set_const 常量、无 _link_param——
+    段 parameters 声明的 socket（Radius_Top/Radius_Bottom/Depth）在树内
+    零消费者，set_instance_input 改值几何纹丝不动（探针实锤：inputs 值
+    变了、34 面 z 顶恒 50）。对齐 _op_cylinder 的参数化范式。"""
     _ = src
     n = ad.add_node(tree, "GeometryNodeMeshCone", "Revolve_Cone")
-    _set_const(n, "Radius Top", spec.get("radius_top", 0.02))
-    _set_const(n, "Radius Bottom", spec.get("radius_bottom", 0.04))
-    _set_const(n, "Depth", spec.get("depth", 0.05))
+    _link_param(ad, tree, sid, _A["radius_top"], n, "Radius Top") or \
+        _set_const(n, "Radius Top", spec.get("radius_top", 0.02))
+    _link_param(ad, tree, sid, _A["radius_bottom"], n, "Radius Bottom") or \
+        _set_const(n, "Radius Bottom", spec.get("radius_bottom", 0.04))
+    _link_param(ad, tree, sid, _A["depth"], n, "Depth") or \
+        _set_const(n, "Depth", spec.get("depth", 0.05))
     return n, "Mesh"
 
 

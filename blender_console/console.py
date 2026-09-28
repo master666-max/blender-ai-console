@@ -619,6 +619,13 @@ class Console:
         geom_changed = None if f["changed_ratio"] is None else f["changed_ratio"] > 0
         preds = self.differ.check_predicates(f, geom_changed=geom_changed)
         all_ok = self.differ.ok(preds)
+        # W-1 接线（2026-09-29）：呈现谓词 → NLG 带化判词（确定性模板，零幻觉）
+        # ——视觉反馈环"读报告"侧的机制化；尺寸谓词由宿主按树 machine_spec
+        #   评估后同格式并入（见 e2e_live.py 的 _evaluate_gate）。
+        from nlg_bands import verdict_report
+        pred_list = [{"predicate": k, **(v if isinstance(v, dict) else {"ok": bool(v)})}
+                     for k, v in preds.items()]
+        verdict = verdict_report(pred_list)
         self.wal.append("render", {"label": f["label"], "ms": f["ms"],
                                    "dhash": f["dhash"], "ahash": f["ahash"],
                                    "changed_ratio": f["changed_ratio"],
@@ -638,6 +645,7 @@ class Console:
         data = {k: f[k] for k in ("dhash", "ahash", "opaque_ratio", "luma_std",
                                   "ms", "changed_ratio", "changed_px",
                                   "hamming", "png_path", "predicates")}
+        data["verdict"] = verdict                  # W-1 接线：NLG 带化判词随帧导出
         if all_ok:
             return self._ok("render_diff", summary, assumption,
                             data=data, diff_b64=f["diff_b64"])
@@ -939,6 +947,25 @@ class Console:
                 else Path(base) / "experience_library.jsonl")
         if self.pref is None:   # 换库不重置偏好学习（热拔插不丢状态）
             self.pref = PreferenceModel(eta=eta)
+
+    def record_experience(self, payload: dict[str, Any]) -> Any:
+        """经验入库便捷通道（E2E STEP9）：dict 直传 library.record_ai。
+
+        payload 键：trigger/attention/story/params/evidence[/verified_failure]。
+        库未激活（library=None，缺省通路）→ 返回结构化 skip（不谎报成功）。
+        """
+        if self.library is None:
+            return self._err("record_experience", "LIBRARY_NOT_BOUND", "",
+                             "经验库未绑定（用 attach_experience 启用）")
+        r = self.library.record_ai(
+            trigger=payload.get("trigger", {}),
+            attention=payload.get("attention", ""),
+            story=payload.get("story", ""),
+            params=payload.get("params"),
+            evidence=payload.get("evidence"),
+            verified_failure=bool(payload.get("verified_failure", False)))
+        return self._ok("record_experience", f"经验入库 eid={r[:12]}…",
+                        data={"eid": r})
 
     # ── 状态导出（M9-4a）─────────────────────────────────────
     def export_state(self) -> ConsoleResult:
