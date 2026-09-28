@@ -441,6 +441,18 @@ graph TB
 | 三环 | 架构总纲 | 管线环 × 视觉反馈环 × RAG 沉淀环（图⑥） |
 | verified_failure | experience.py | 机器门禁验证过的失败：AI 可凭谓词证据入账，status 仍 draft（晋升过人） |
 
+### ⑨b 理论出处（PARC 实践学派——verified_failure 的世界观来源）
+
+> verified_failure 不是孤立灵感，而是把 PARC"认知在实践中学派"的内核
+> 搬进 AI 记忆系统的一次落地。三本原著 + 一本同门，2026-09-29 收录：
+
+| 出处 | 核心命题 | 在本项目中的对应物 |
+|---|---|---|
+| Orr《Talking About Machines》(1996) | 战争故事是诊断知识的一级载体；诊断=把零散信息拼成连贯叙述；故事在社群中的流通承载现场机器行为新细节 | record_ai(attention, story, params, evidence)；verified_failure 不衰减不过期；render_diff 的 refutable_assumption（比原命题更进一步：叙事必须可证伪） |
+| Suchman《Plans and Situated Actions》(1987) | 人并不执行计划——计划只是情境行动的资源，不是指令脚本 | 逻辑树+意图 patch 可改写计划（半尊重）；PlanSchema"零 error 放行"仍是"计划=合同"心智（待搬，见 W-14） |
+| Lave & Wenger《Situated Learning》(1991) | 合法边缘参与：学习=在实践社群中从边缘走向中心 | verified_failure 的 draft → human:* promote 两段制（AI 只能写边缘草稿，晋升是走向中心） |
+| Hutchins《Cognition in the Wild》(1995) | 认知分布于系统而非头脑（distributed cognition） | 三环架构的认识论地基：诊断能力不在任何一个模块里，在管线×视觉×RAG 的循环里 |
+
 ---
 
 ## ⑩ 过期挂单（图与代码打架时：以代码为准，图挂单重画）
@@ -456,6 +468,12 @@ graph TB
 | W-6 | **"四层索引"未实现**：experience 实际只有 trigger 键匹配 + weight 排序召回；向量/参数分布/图结构/时序四层索引是设计愿景（v1 图曾虚写"已实现"——2026-09-29 反向审计揪出） | 新索引层落地时销单，图⑥ C3 改实线描述 |
 | W-7 | **commits.commit 主链路未接线**：SegmentCommits.commit（m1_core.py:566）存在但 console.py 从不调用；段交付的 commit 账本只在 export_state 被读 | console 段 passed 后接 commits.commit 时销单 |
 | W-8 | **blocked 幽灵状态**：logic_tree.STATUSES 含 blocked，但代码无任何转移将其置位（④ 的两条 blocked 入边在代码不存在） | 补置位逻辑（deps failed 时 next_ready 拒绝并置 blocked）或删状态时销单 |
+| W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量，不由撰写者自述）：provenance.reused/reuse_success 字段已存在（experience.py:90/333），但①recall 命中→自动 mark_reuse 的闭环缺失（靠外部显式调用）、②存活率→撰写 agent 评分信号缺失 | recall 自动计数闭环 + 评分信号上线时销单；与 W-13 共用引用图 |
+| W-10 | **共享词汇卡未提供**（Orr"把用户引入话语社群"的后半句）：ask_round 提问卡有 default/why（intake.py:41-45），但不告诉用户系统可解析哪些词（segment/gate/G1/blockout）——用户反馈用系统词汇，视觉环 patch 解析率直接受益 | ask_round 输出加词汇页时销单；零新模块 |
+| W-11 | **失败工件考古接口缺失**（Orr 垃圾桶原则：老技师先翻废纸篓解读坏件共性）：中间产物**有痕无视图**——WAL 记 recompile(old_spec)/ab 落选（console.py:397/932），但 gn_verify 只回 ok+summary+suggestions，无"被丢弃候选的集合视图与共性解读" | gn_artifact 加 evidence 模式（失败分支 GN 状态/被否决 patch/忽略警告的考古查询）时销单 |
+| W-12 | **owner-session 与无主工件防毒**（Orr 领地与孤机：无主机器"浑身芒刺"；社会损害不可回滚）：ExperienceEntry 无 owner 字段（grep 零命中实锤）；无主工件（如 escape.py 零调用方=W-4）可进 recall 语料——坏故事晋升会污染所有后续会话，WAL 能回滚现场、回滚不了被污染的检索 | 数据模型加 owner-session 字段 + recall 过滤无主件时销单；安全属性，优先级高于 W-9/W-13 |
+| W-13 | **引用债/互惠网络**（Orr 互惠伦理：借件代接工单，团队共担责任）：多会话场景下 B 会话被 A 的 verified_failure 救过，B 的失败叙事应享优先晋升评审——让故事形成互助网 | 与 W-9 共用引用图；多会话运行时上线才有意义 |
+| W-14 | **plan 修订未入库为一级事件**（Suchman：计划是资源不是脚本——哲学底座）：意图 patch 已可改写计划，但每次 plan 修订本身没有作为 war story 入库；下次检索学不到"什么情况下计划容易被改、改成什么样" | plan 修订事件进 experience 通道时销单 |
 
 > 挂单纪律：图上每个"⚠️/规划中/设计位"标记必须对应 ⑩ 里一行挂单；
 > 挂单销单与图修改同一个 PR，不允许只改图不销单（或反之）。
