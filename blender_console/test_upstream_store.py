@@ -14,7 +14,36 @@ sys.path.insert(0, str(HERE))
 from experience import ExperienceStore
 from upstream_store import UpstreamExperienceStore
 
-ISO = ROOT / "上游隔离区" / "经验库条目"
+import shutil
+import tempfile
+SAMPLE_DIR = Path(tempfile.mkdtemp(prefix="upstream_store_selfcontained_"))
+
+def _write_sample(n: int) -> None:
+    """写一条自含样例条目（跨设备可跑：不再依赖仓库外的上游隔离区数据）。"""
+    eid = "EXP-%03d" % n
+    bake = "烘焙" if n == 14 else ""
+    story = ("现象：样例故障 %s 的%s现象——测试自含化样例，"
+             "不依赖仓库外隔离区数据，正文需超过四十字以满足 story 保留断言。" % (eid, bake)) + "填充细节。" * 4
+    fix = "规避法：%s 的规避手段——先快照再批量，单一前缀，身份差集清理。" % eid
+    (SAMPLE_DIR / (eid + ".md")).write_text(
+        "---\n"
+        "id: " + eid + "\n"
+        "date: 2026-09-28\n"
+        'source: "test-self-contained fixture"\n'
+        "status: promoted\n"
+        "legacy: BMCP-ERR-%03d\n" % n +
+        "evidence://n"
+        '  - artifact: "fixture://' + eid + '"\n'
+        '    quote: "' + eid + ' 样例证据"\n'
+        '    recalc: "读 fixture ' + eid + '.md"\n'
+        "---\n"
+        "## 现象与根因\n\n" + story + "\n\n"
+        "## 规避法\n\n" + fix + "\n",
+        encoding="utf-8")
+
+for _i in range(1, 15):
+    _write_sample(_i)
+ISO = SAMPLE_DIR
 
 ROWS: list[dict] = []
 
@@ -100,4 +129,5 @@ failed = [r for r in ROWS if not r["ok"]]
 print(f"\nUPSTREAM STORE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
 for f in failed:
     print("  FAILED:", f["case"], "->", f.get("detail"))
+shutil.rmtree(SAMPLE_DIR, ignore_errors=True)
 sys.exit(1 if failed else 0)
