@@ -135,10 +135,6 @@ check("负重轮 instances.count=16", lambda: n12["build"]["instances"]["count"]
 check("负重轮 per_side=8", lambda: n12["build"]["instances"]["per_side"], 8)
 check("舱门 instances.count=2", lambda: next(n for n in tree["nodes"] if n["id"] == "2.4")["build"]["instances"]["count"], 2)
 
-failed = [r for r in ROWS if not r["ok"]]
-print(f"\nLOGIC TREE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
-for f in failed:
-    print("  FAILED:", f["case"], "->", f.get("detail"))
 # ── [6] 逻辑树→plan 桥（M7：PlanSchema 零 issue + deps 并行）──
 print("\n[6] 逻辑树→plan 桥")
 from logic_tree import to_plan
@@ -236,4 +232,11 @@ check("上游修复后 B 解除 → pending",
 check("解除留痕 evidence（BLOCKED/UNBLOCKED）",
       lambda: ("UNBLOCKED" in "".join(run8.evidence.get("B", []))), True)
 
+failed = [r for r in ROWS if not r["ok"]]
+print(f"\nLOGIC TREE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
+
+failed = [r for r in ROWS if not r["ok"]]
+print(f"\nLOGIC TREE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
+for f in failed:
+    print("  FAILED:", f["case"], "->", f.get("detail"))
 sys.exit(1 if failed else 0)
