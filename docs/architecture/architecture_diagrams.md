@@ -365,7 +365,7 @@ graph TB
     subgraph HOST["本机"]
         subgraph BP["Blender 5.2 进程"]
             BPY["bpy（Python 3.11）"]
-            GNSERVER["API 服务：8377<br/>（Blender 内嵌——规划中，挂单 W-3）"]
+            GNSERVER["embedded_server.py<br/>API 服务：8377（已落地 2026-09-29）"]
             GN_NODES["GN 节点组<br/>（op_compiler 产物）"]
         end
         subgraph SYSPY["系统 Python 进程"]
@@ -447,7 +447,7 @@ graph TB
 |---|---|---|
 | W-1 | **nlg_bands 零调用方**：⑥ 视觉反馈环的 B3（NLG 带化判词）是设计位，代码里还没有 RD→NLG 的调用 | gn_verify/console import nlg_bands 并在 verify/render 后产判词时销单，图②⑥补实边 |
 | W-2 | **SEGMENT_OPS 两份白名单**：plan_schema.py 与 logic_tree.py 各维护一份 op 白名单，漂移风险 | 合并为单一真源（logic_tree 从 plan_schema import）时销单 |
-| W-3 | **Web 控制台 API 层缺失**：console.html 调 /api/revert 等，但 server.py 纯静态；回退能力已真机验证（revert_live.py 13/13）但 HTTP 不通 | Blender 内嵌 API server（bpy.app.timers 主线程队列）落地时销单 |
+| ~~W-3~~ | ~~Web 控制台 API 层缺失~~ | **已销单（2026-09-29）**：embedded_server.py 落地——HTTP daemon 线程 + 队列 + 主线程泵（GUI=bpy.app.timers / 后台脚本=manual pump 双模式）；api_revert_live.py 真机 14/14（state/checkpoint/revert/pop/drop_segment/verify/override/UNKNOWN_OP/静态伺服/无死锁）。销单动作：部署图 ⑦ 同步更新 |
 | W-4 | **escape 零调用方**：M4-4 逃逸舱是治理关键件但核心链路无人 import（设计上由 AI 会话层显式走） | AI 会话层接线 escape 通道时销单，图①②补实边 |
 | W-5 | **intake 核心模块无内部调用方**：只被实验脚本 import，运行时调用方是 AI 会话层（进程外） | 会话层代码入库时销单 |
 
