@@ -42,7 +42,7 @@ graph TB
         M1["m1_core.py<br/>数据层（DAG/WAL/RT/VP/SC）"]
         EXP["experience.py<br/>经验库（M6 ①）"]
         DIR["director.py<br/>导演模式（M7 ①）"]
-        ESC["escape.py<br/>逃逸舱（M4-4 ①）<br/>⚠️ 当前零调用方"]
+        ESC["escape.py<br/>逃逸舱（M4-4 ①）<br/>console 已接线"]
         NLG["nlg_bands.py<br/>带化判词（已接线）"]
     end
 
@@ -76,6 +76,7 @@ graph TB
     CONSOLE --> RC
     CONSOLE --> RD
     CONSOLE --> PS
+    CONSOLE --> ESC
     OC --> MC
     DIR --> CONSOLE
     OC -->|"GN nodes"| GN
@@ -140,7 +141,7 @@ graph LR
     end
 
     subgraph GOV["治理层"]
-        ESC["escape.py<br/>⚠️ 零调用方"]
+        ESC["escape.py<br/>console 已接线（W-4）"]
         US["upstream_store.py"]
     end
 
@@ -156,6 +157,8 @@ graph LR
     CONSOLE --> PS
     CONSOLE --> RD
     CONSOLE --> NLG
+    CONSOLE --> INTAKE
+    CONSOLE --> ESC
     OC --> MC
     PS --> OC
     DIR --> CONSOLE
@@ -470,17 +473,18 @@ graph TB
 | ~~W-1~~ | ~~nlg_bands 零调用方~~ | **已销单（2026-09-29）**：console.render_diff 接线 verdict_report（AST 实证 console import nlg_bands），E2E 九步链（e2e_live.py 11/11）判词驱动 patch 两轮收敛实证；图②⑥已补实边 |
 | W-2 | ~~两份 op 白名单~~ | **已销单（2026-09-29）**：logic_tree.py import plan_schema.SEGMENT_OPS 并模块加载即断言 OP_TO_SEG 值域 ⊆ 白名单（漂移在 import 时响亮失败）。连锁更新：图② `LT --> PS` 从 v1 假边变成受控真边——"图随代码"的完整闭环案例 |
 | ~~W-3~~ | ~~Web 控制台 API 层缺失~~ | **已销单（2026-09-29）**：embedded_server.py 落地——HTTP daemon 线程 + 队列 + 主线程泵（GUI=bpy.app.timers / 后台脚本=manual pump 双模式）；api_revert_live.py 真机 14/14（state/checkpoint/revert/pop/drop_segment/verify/override/UNKNOWN_OP/静态伺服/无死锁）。销单动作：部署图 ⑦ 同步更新 |
-| W-4 | **escape 零调用方**：M4-4 逃逸舱是治理关键件但核心链路无人 import（设计上由 AI 会话层显式走） | AI 会话层接线 escape 通道时销单，图①②补实边 |
-| W-5 | **intake 核心模块无内部调用方**：只被实验脚本 import，运行时调用方是 AI 会话层（进程外） | 会话层代码入库时销单 |
+| ~~W-4~~ | ~~escape 零调用方~~ | **已销单（2026-09-29）**：console 接线 EscapeHatch——`escape_run_template`（L2 模板）/`escape_run_script`（L3 域白名单 AST 审查+human:* 审核标记，执行权留在宿主）；AST 实证 escape ← console；test_wiring 18/18 |
+| ~~W-5~~ | ~~intake 核心模块无内部调用方~~ | **已销单（2026-09-29）**：console 接线 IntakeSession——`start_session/ask_round/submit/freeze` 四方法门面（会话层只调 console 一个入口）；AST 实证 intake ← console；test_intake 22/22 |
 
-| W-6 | **"四层索引"未实现**：experience 实际只有 trigger 键匹配 + weight 排序召回；向量/参数分布/图结构/时序四层索引是设计愿景（v1 图曾虚写"已实现"——2026-09-29 反向审计揪出） | 新索引层落地时销单，图⑥ C3 改实线描述 |
+| W-6 | ~~四层索引未实现~~ **图索引+参数分布索引已落地（2026-09-29）**：`_graph`（trigger 键值→eids，`related()` 一跳邻域）/`_pidx`（params@量级桶，`recall_by_param()`），add/load 增量维护重启重建；test_wiring 行为验证。**遗留**：向量层（需 embedding 外部基建）——不销单 | 图层/参数层销单；向量层待基建 |
+| ~~W-9~~ | ~~故事存活率索引~~ **完全销单（2026-09-29）**：recall 命中自动计数 recall_hits + survival_rate 评分信号 + _compute_kpis 输出 experience 统计（entries/draft/verified/avg_survival）——评分信号已可被会话层/前端直接消费；与 W-6 图索引互补（存活率=流通层） |
 | ~~W-7~~ | ~~commits.commit 主链路未接线~~ | **已销单（2026-09-29）**：console.compile 成功即 `commits.commit(seg, vparams快照, "fp:"+fingerprint, deps)`（内容寻址自动去重，revert/set_param 重编译产出新 hash）；E2E 实证 export_state.commits 五段全 hash |
 | W-8 | ~~blocked 幽灵状态~~ **已销单（2026-09-29）**：next_ready 扫描落地——pending+deps(failed/blocked) → blocked（阻断传播），blocked+deps 全 passed → 解除回 pending；evidence 留痕 BLOCKED/UNBLOCKED；test_logic_tree [10] 4 断言；图④ 补三条转移 |
-| W-9 | **故事存活率索引**（Orr 地位经济学：故事价值由流通度量）：recall 命中自动计数 provenance.recall_hits（match>0 才算真命中，落盘）；survival_rate(eid)=reuse_success/recall_hits 暴露为评分信号——**不反哺排序权重**（防自增强反馈环）。test_experience [7d] 4 断言。**遗留**：与 W-6 对齐登记为四层索引之一层；评分信号 hook 进 agent 评分待接 | **部分销单**：计数闭环+survival_rate 已落地；评分信号 hook 与四层索引归并随 W-6 收口 |
+| ~~W-9~~ | ~~故事存活率索引~~ **完全销单（2026-09-29）**：recall 命中自动计数 recall_hits + survival_rate 评分信号 + _compute_kpis 输出 experience 统计——评分信号可被会话层/前端直接消费；与 W-6 图索引互补（存活率=流通层） |
 | ~~W-10~~ | ~~共享词汇卡未提供~~ | **已销单（2026-09-29）**：intake.py `vocab_card()` 挂在 ask_round 卡上——11 词条（segment/gate/G1/blockout/tier/set_param/patch/GoodPoint/revert/verified_failure/draft-promote），test_intake 22/22 |
 | W-11 | ~~失败工件考古接口缺失~~ **基础版销单（2026-09-29）**：console.archaeology()——遍历 WAL 收集 recompile/drop_segment/drop_part/override，按 seg 分组统计高危区（确定性共性解读）；真机实证 1 件丢弃物→高危区 [('B',1)]。**遗留**：失败分支 GN 状态快照（重量级）待 gn_artifact 扩展 |
 | ~~W-12~~ | ~~owner-session 与无主工件防毒~~ | **已销单（2026-09-29）**：ExperienceEntry.owner 字段 + record_ai/record_override 自动落账（ai:ai-channel / user-override）+ recall 防毒过滤器（无主件不可召回）+ from_dict 迁移（存量 → legacy:pre-W12 有主）；test_experience [7c] 4 断言（54/54）。安全属性落地 |
-| W-13 | **引用债/互惠网络**（Orr 互惠伦理：借件代接工单，团队共担责任）：多会话场景下 B 会话被 A 的 verified_failure 救过，B 的失败叙事应享优先晋升评审——让故事形成互助网 | 与 W-9 共用引用图；多会话运行时上线才有意义 |
+| ~~W-13~~ | ~~引用债/互惠网络~~ **基础版销单（2026-09-29）**：ExperienceEntry.credits_to 字段 + record_credit 记账 + debt_report（债主榜+在还的债）+ record_ai(credits_to=) 直写；test_wiring 行为验证。**遗留**：多会话运行时（跨会话互惠）待宿主编排——库内数据层已就绪 |
 | ~~W-14~~ | ~~plan 修订未入库为一级事件~~ **完全销单（2026-09-29）**：note_plan_revision 通道 + set_param 几何变化自动触发（changed=True 即入库，库未激活静默跳过——缺省通路零依赖）。Suchman"计划是资源"的落地完成 |
 
 > **重复挂单防护（2026-09-29 核对实录）**：Orr/PARC 学派那一批吸收件（故事地位经济学／共享词汇卡／垃圾桶原则／领地与孤机／互惠网络／Suchman 哲学底座）**已在案为 W-9~W-14 + ⑨b**；同日另有一份同源分析（追溯到同一批原著）若再次流入，**只许补增量、不许另起编号**。

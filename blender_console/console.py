@@ -33,6 +33,8 @@ from gn_session import ATTR_NAME, read_face_attribution, stamp_attribution
 from gn_verify import GeometryVerifier
 from op_compiler import OPS, OpCompileError, compile_op, _gi, _go
 from mat_compiler import MaterialConstraintError
+from intake import IntakeSession                     # W-5 接线（2026-09-29）
+from escape import EscapeHatch                       # W-4 接线（2026-09-29）
 from rig_compiler import RigConstraintError, compile_rig
 from gn_artifact import GNArtifact
 from render_diff import RenderDiffer
@@ -114,6 +116,8 @@ class Console:
         self.table = RevisionTable(self.dag)
         self.vparams = VersionedParams()
         self.commits = SegmentCommits()
+        self.hatch = EscapeHatch()             # W-4：逃逸舱三层粒度（L2 模板/L3 脚本）
+        self.session: IntakeSession | None = None   # W-5：提问协议会话（start_session）
         self.verifier = GeometryVerifier(budget_faces=300_000, ground_z=-1.0)
         self.segments: dict[str, dict[str, Any]] = {}
         self.order: list[str] = []
@@ -979,8 +983,72 @@ class Console:
             params=payload.get("params"),
             evidence=payload.get("evidence"),
             verified_failure=bool(payload.get("verified_failure", False)))
+        for to_eid in payload.get("credits_to", []):   # W-13：引用债记账
+            try:
+                self.library.record_credit(r, to_eid)
+            except KeyError:
+                pass
         return self._ok("record_experience", f"经验入库 eid={r[:12]}…",
                         data={"eid": r})
+
+    # ── W-4：逃逸舱门面（三层粒度，治理位外置）────────────────
+    def escape_run_template(self, name: str, params: dict[str, Any],
+                            actor: str = "ai") -> Any:
+        """L2 模板执行：plan 引用注册过的模板名（模板体预审，plan 不许改）。"""
+        try:
+            out = self.hatch.run_template(name, params, actor=actor)
+        except Exception as exc:                       # noqa: BLE001 R1 拒绝留痕
+            return self._err("escape_run_template",
+                             getattr(exc, "code", "ESCAPE_ERROR"), name,
+                             str(exc)[:200])
+        self.wal.append("escape", {"tier": "L2", "template": name, "actor": actor})
+        return self._ok("escape_run_template", f"L2 模板 {name} 执行完成",
+                        data=out)
+
+    def escape_run_script(self, code: str, audited_by: str,
+                          label: str = "") -> Any:
+        """L3 脚本执行：域白名单 AST 审查通过才放行（返回 shell，执行权在宿主）。
+        audited_by 必须 human:* ——机器/引擎无权批准自由代码。"""
+        try:
+            out = self.hatch.run_script(code, audited_by=audited_by, label=label)
+        except Exception as exc:                       # noqa: BLE001
+            return self._err("escape_run_script",
+                             getattr(exc, "code", "ESCAPE_ERROR"), label,
+                             str(exc)[:200])
+        self.wal.append("escape", {"tier": "L3", "label": label,
+                                   "audited_by": audited_by})
+        return self._ok("escape_run_script", "L3 脚本审查通过（shell 已返回）",
+                        data=out)
+
+    # ── W-5：提问协议门面（会话层只需调 console 一个入口）──────
+    def start_session(self, brief: str, parts: Sequence[str] = (),
+                      scene_facts: dict[str, Any] | None = None,
+                      mode: str = "standard") -> Any:
+        """创建提问会话（M9-1b）：brief → ask_round → submit → freeze
+        → to_plan_skeleton。返回 IntakeSession（三方法直接可用）。"""
+        self.session = IntakeSession(brief=brief, mode=mode,
+                                     parts=list(parts),
+                                     scene_facts=scene_facts)
+        return self._ok("start_session",
+                        f"会话已建立（topic={self.session.topic!r}）",
+                        data={"topic": self.session.topic})
+
+    def session_ask(self) -> Any:
+        if self.session is None:
+            return self._err("session_ask", "NO_SESSION", "", "先 start_session")
+        return self._ok("session_ask", "提问卡", data=self.session.ask_round())
+
+    def session_submit(self, answers: dict[str, Any]) -> Any:
+        if self.session is None:
+            return self._err("session_submit", "NO_SESSION", "", "先 start_session")
+        out = self.session.submit(answers)
+        return self._ok("session_submit", f"已收 {len(answers)} 答案", data=out)
+
+    def session_freeze(self) -> Any:
+        if self.session is None:
+            return self._err("session_freeze", "NO_SESSION", "", "先 start_session")
+        out = self.session.freeze()
+        return self._ok("session_freeze", "PRD 冻结", data=out.get("prd", {}))
 
     # ── W-11/W-14：垃圾桶考古 + plan 修订入库（2026-09-29）────
     def archaeology(self) -> dict[str, Any]:
@@ -1068,10 +1136,31 @@ class Console:
                 verify_fails += 1
         dirty_n = sum(1 for r in self.table.snapshot().values()
                       if r.get("dirty"))
-        return {"override_rate": round(n_ov / n_ab, 4) if n_ab else None,
-                "overrides": n_ov, "ab_decisions": n_ab,
-                "dirty_segments": dirty_n, "verify_fails": verify_fails,
-                "override_curve": curve}
+        out = {"override_rate": round(n_ov / n_ab, 4) if n_ab else None,
+               "overrides": n_ov, "ab_decisions": n_ab,
+               "dirty_segments": dirty_n, "verify_fails": verify_fails,
+               "override_curve": curve}
+        # W-9 评分 hook（2026-09-29）：经验库存活率统计——会话层/前端直接消费
+        if self.library is not None:
+            rates = []
+            n_draft = n_verified = 0
+            for e in self.library.entries.values():
+                if e.tombstone:
+                    continue
+                if e.status == "draft":
+                    n_draft += 1
+                elif e.status == "verified":
+                    n_verified += 1
+                sr = e.provenance.get("recall_hits", 0)
+                if sr:
+                    su = int(e.provenance.get("reuse_success", 0))
+                    rates.append(su / sr)
+            out["experience"] = {
+                "entries": len(self.library.entries),
+                "draft": n_draft, "verified": n_verified,
+                "avg_survival": round(sum(rates) / len(rates), 4) if rates else None,
+                "scored": len(rates)}
+        return out
 
     # ── override ─────────────────────────────────────────────
     def override(self, note: str = "") -> ConsoleResult:

@@ -95,6 +95,9 @@ class ExperienceEntry:
                                        #   "ai:ai-channel" / "user-override" /
                                        #   "legacy:pre-W12"（存量语料迁移）。
                                        #   空 = 无主件，recall 防毒过滤器跳过
+    credits_to: list[str] = field(default_factory=list)  # W-13 引用债：本条目
+                                       #   站在哪些 eid 的肩膀上（B 被 A 的
+                                       #   教训救过 → B 记 credits_to=[A]）
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -120,7 +123,8 @@ class ExperienceEntry:
                 "recall_hits": 0},
             weight=float(d.get("weight", 1.0)),
             eid=d.get("eid", ""),
-            owner=owner)
+            owner=owner,
+            credits_to=list(d.get("credits_to", [])))
 
     def content_eid(self) -> str:
         blob = json.dumps({"t": self.trigger, "a": self.attention,
@@ -277,6 +281,8 @@ class ExperienceLibrary:
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
         self.entries: dict[str, ExperienceEntry] = {}
+        self._graph: dict[str, set[str]] = {}    # W-6 图索引：trigger 键值 → eids
+        self._pidx: dict[str, set[str]] = {}     # W-6 参数索引：name@量级桶 → eids
         if self.path.exists():
             for line in self.path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
@@ -284,6 +290,7 @@ class ExperienceLibrary:
                     continue
                 e = ExperienceEntry.from_dict(json.loads(line))
                 self.entries[e.eid] = e
+                self._index_add(e)               # W-6：加载即重建两层索引
 
     def _save(self) -> None:
         tmp = self.path.with_suffix(".tmp")
@@ -319,8 +326,89 @@ class ExperienceLibrary:
         if entry.eid in self.entries:          # 幂等（内容寻址去重）
             return entry.eid
         self.entries[entry.eid] = entry
+        self._index_add(entry)                 # W-6：图索引/参数索引增量维护
         self._save()
         return entry.eid
+
+    # ── W-6 · 两层索引（图索引 + 参数分布索引）───────────────
+    def _index_add(self, e: ExperienceEntry) -> None:
+        """add/load 时增量维护：
+        * 图索引 _graph：trigger 每个键值对 → eids（关联发现的一跳邻域）
+        * 参数索引 _pidx：params 名 × 数量级桶（0.01/0.1/1/10/100…）→ eids
+        """
+        for k, v in (e.trigger or {}).items():
+            key = f"{k}={v}"
+            self._graph.setdefault(key, set()).add(e.eid)
+        for pk, pv in (e.params or {}).items():
+            try:
+                f = float(pv)
+            except (TypeError, ValueError):
+                continue
+            mag = 0.0 if f == 0 else math.floor(math.log10(abs(f)))
+            self._pidx.setdefault(f"{pk}@1e{mag}", set()).add(e.eid)
+
+    def related(self, eid: str, n: int = 4) -> list[ExperienceEntry]:
+        """W-6 图层独有增量：与指定条目共享任一 trigger 键值的一跳邻域
+        （"同项目/同段/同 op 的其他故事"——全扫查不出的关联面）。"""
+        e = self.entries.get(eid)
+        if e is None:
+            raise KeyError(f"经验条目 {eid!r} 不存在")
+        cand: set[str] = set()
+        for k, v in (e.trigger or {}).items():
+            cand |= self._graph.get(f"{k}={v}", set())
+        cand.discard(eid)
+        out = [(self.entries[c] for c in cand)]
+        rows = [self.entries[c] for c in cand if c in self.entries
+                and not self.entries[c].tombstone]
+        rows.sort(key=lambda x: -x.weight)
+        return rows[:n]
+
+    def recall_by_param(self, name: str, lo: float, hi: float,
+                        n: int = 4) -> list[ExperienceEntry]:
+        """W-6 参数分布索引：params[name] 落在 [lo, hi] 数量级桶的条目
+        （"以前在 80-100mm 区间踩过什么坑"——按数量级预筛再精查）。"""
+        out: list[ExperienceEntry] = []
+        seen: set[str] = set()
+        for mag in range(-6, 7):
+            for eid in self._pidx.get(f"{name}@1e{mag}", ()):
+                if eid in seen or eid not in self.entries:
+                    continue
+                seen.add(eid)
+                e = self.entries[eid]
+                if e.tombstone or not e.owner:
+                    continue
+                v = (e.params or {}).get(name)
+                try:
+                    if v is not None and lo <= float(v) <= hi:
+                        out.append(e)
+                except (TypeError, ValueError):
+                    continue
+        out.sort(key=lambda x: -x.weight)
+        return out[:n]
+
+    # ── W-13 · 引用债（Orr 互惠网络）─────────────────────────
+    def record_credit(self, from_eid: str, to_eid: str) -> None:
+        """引用记账：B 条目（from）受 A 条目（to）帮助 → B.credits_to 添加 A。
+        债随条目永久在案——晋升评审时可查"这条经验欠谁"。"""
+        f = self.entries.get(from_eid)
+        t = self.entries.get(to_eid)
+        if f is None or t is None:
+            raise KeyError("引用的条目不存在")
+        if to_eid not in f.credits_to:
+            f.credits_to.append(to_eid)
+        self._save()
+
+    def debt_report(self) -> dict[str, Any]:
+        """引用债表：被引用排行（债主榜）+ 引用了 draft 条目的"在还的债"。"""
+        credited: dict[str, int] = {}
+        for e in self.entries.values():
+            for t in e.credits_to:
+                credited[t] = credited.get(t, 0) + 1
+        lenders = sorted(credited.items(), key=lambda t: -t[1])
+        owing = [{"eid": e.eid[:12], "attention": e.attention[:40],
+                  "credits_to": e.credits_to}
+                 for e in self.entries.values() if e.credits_to]
+        return {"lenders": lenders[:6], "owing_count": len(owing), "owing": owing[:6]}
 
     def recall(self, query: dict[str, Any], n: int = 3,
                include_draft: bool = False) -> list[ExperienceEntry]:
@@ -412,7 +500,8 @@ class ExperienceLibrary:
                   params: dict[str, float] | None = None,
                   evidence: list[dict[str, str]] | None = None,
                   supersedes: str | None = None,
-                  verified_failure: bool = False) -> str:
+                  verified_failure: bool = False,
+                  credits_to: list[str] | None = None) -> str:
         """**免疫通道**：AI 侧追加经验——强制 draft（M6-2b/上游：引擎只写 draft，
         晋升必须过人）。AI 无权自宣验收；带完整出处三件套的也只能到 draft，
         由 promote(actor="human:*") 升级。
@@ -429,7 +518,13 @@ class ExperienceLibrary:
                                     else "unverified",
                             status="draft", evidence=evidence or [],
                             supersedes=supersedes)
-        return self.add(e, author="ai", source="ai-channel")
+        eid = self.add(e, author="ai", source="ai-channel")
+        for to_eid in (credits_to or []):          # W-13：引用债随条目落账
+            try:
+                self.record_credit(eid, to_eid)
+            except KeyError:
+                pass
+        return eid
 
     def promote(self, eid: str, actor: str) -> None:
         """draft → verified（M6-2b 免疫通道的人工门）：**只接受 human:* actor**——
