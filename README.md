@@ -241,6 +241,6 @@ M1–M10 主线全绿；R7 深水区 AI 可做项收官。回归基线：**34 �
 
 <div align="center">
 
-[MIT](LICENSE) © 2026 · *以工程纪律对待每一个像素。*
+[MIT](LICENSE) © 2026 · 
 
 </div>
