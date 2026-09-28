@@ -27,11 +27,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 __all__ = [
     "CycleError", "PivotBlocked", "SagaTag", "ParamUpdate",
@@ -292,6 +293,8 @@ class WALLog:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             with self._path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+                f.flush()
+                os.fsync(f.fileno())   # R5：掉电不丢已落账行——WAL 的存在意义就是崩溃恢复
         return row
 
     def replay(self) -> list[dict[str, Any]]:
@@ -310,21 +313,34 @@ class WALLog:
             prev = r["hash"]
         return True
 
-    def compact(self, checkpoint_kind: str = "checkpoint") -> int:
-        """A32 compaction：保留最近一个 checkpoint 之后的事件，之前的折成一行。
+    def compact(self, checkpoint_kind: str = "compaction_barrier",
+                snapshot_resolver: Callable[[str], bool] | None = None,
+                ) -> dict[str, Any]:
+        """A32 compaction（A1/A2 语义修复 · 2026-09-28）：
 
-        返回压缩掉的事件数。避免 Postgres 式"只增不清"。
+        * 边界 kind 默认 "compaction_barrier"——与 console 回退点 "restore_point"
+          拆分命名空间（A2：旧默认 "checkpoint" 会把用户每次存档都变成授权丢历史）。
+        * 边界行 payload 必须携带 snapshot_ref 且（若提供 resolver）引用可解析，
+          否则拒绝压缩返回 dropped=0（A1：快照未落盘前折叠历史 = 数据丢失，
+          宁可不压缩）。resolver 通常传 SnapshotStore.has。
+        * 返回 {"dropped": int, "hash_map": {old_hash: new_hash}}——重哈希后旧
+          hash 引用不再静默断链（R6）：保留行映射到自身新 hash，丢弃行折叠到
+          边界行新 hash。
         """
         last_cp = -1
         for i, r in enumerate(self._rows):
             if r["kind"] == checkpoint_kind:
                 last_cp = i
         if last_cp < 0:
-            return 0
-        kept = self._rows[last_cp:]
-        dropped = len(self._rows) - len(kept)
+            return {"dropped": 0, "hash_map": {}}
+        ref = self._rows[last_cp]["payload"].get("snapshot_ref")
+        if not ref or (snapshot_resolver is not None and not snapshot_resolver(ref)):
+            return {"dropped": 0, "hash_map": {}}     # A1 守卫：拒绝压缩
+        old_rows = list(self._rows)
+        kept = old_rows[last_cp:]
+        dropped = len(old_rows) - len(kept)
         if dropped <= 0:
-            return 0
+            return {"dropped": 0, "hash_map": {}}
         # 重排 seq 并重算链
         new_rows, prev = [], self.GENESIS
         for i, r in enumerate(kept):
@@ -336,7 +352,49 @@ class WALLog:
             self._path.write_text(
                 "\n".join(json.dumps(r, ensure_ascii=False, default=str) for r in self._rows) + "\n",
                 encoding="utf-8")
-        return dropped
+        hash_map = {r["hash"]: new_rows[k]["hash"] for k, r in enumerate(kept)}
+        edge_new = new_rows[0]["hash"]
+        for r in old_rows[:last_cp]:                  # 丢弃行折叠到边界行新 hash
+            hash_map[r["hash"]] = edge_new
+        return {"dropped": dropped, "hash_map": hash_map}
+
+
+class SnapshotStore:
+    """内容寻址快照仓（A1 · 2026-09-28：checkpoint 状态落盘——compaction 的前置条件）。
+
+    put(obj) → sha16 引用；get(ref) → 原对象；has(ref) → bool。
+    落盘 <root>/<sha16>.json；同内容幂等同 ref（内容寻址 = 去重 + 天然防篡改）。
+    console.checkpoint() 把 mesh/params 序列化后 put 进来，WAL 边界行 payload
+    携带返回的 ref——WALLog.compact 靠它守卫：快照不在盘上就拒绝折叠历史。
+    """
+
+    def __init__(self, root: str | Path | None) -> None:
+        # root=None → 进程内 dict 模式（console 无 workdir 时退化；语义不变）
+        self._mem: dict[str, str] = {}
+        self._root = Path(root) if root else None
+        if self._root:
+            self._root.mkdir(parents=True, exist_ok=True)
+
+    def put(self, obj: Any) -> str:
+        blob = json.dumps(obj, ensure_ascii=False, sort_keys=True, default=str)
+        ref = hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+        if self._root:
+            f = self._root / f"{ref}.json"
+            if not f.exists():
+                f.write_text(blob, encoding="utf-8")
+        else:
+            self._mem[ref] = blob
+        return ref
+
+    def get(self, ref: str) -> Any:
+        if self._root:
+            return json.loads((self._root / f"{ref}.json").read_text(encoding="utf-8"))
+        return json.loads(self._mem[ref])
+
+    def has(self, ref: str) -> bool:
+        if self._root:
+            return (self._root / f"{ref}.json").exists()
+        return ref in self._mem
 
 
 # ══════════════════════════════════════════════════════════════
@@ -615,13 +673,27 @@ def _run_tests() -> None:
     lines[1] = json.dumps(tampered, ensure_ascii=False)
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     ok(not WALLog(p).verify(), "篡改后链校验必须失败")
-    # compaction
+    # compaction（A1/A2 语义修复后：边界=compaction_barrier，payload 必带 snapshot_ref）
+    store = SnapshotStore(Path(tempfile.mkdtemp()))
     wal2 = WALLog(None)
     for i in range(5):
-        wal2.append("checkpoint" if i == 2 else "param", {"i": i})
-    dropped = wal2.compact()
-    ok(dropped == 2 and len(wal2.replay()) == 3, f"compaction 应保留 checkpoint 之后（drop={dropped}）")
-    ok(wal2.verify(), "compaction 后链仍需自洽")
+        if i == 2:
+            wal2.append("compaction_barrier",
+                        {"i": i, "snapshot_ref": store.put({"i": i})})
+        else:
+            wal2.append("param", {"i": i})
+    res = wal2.compact(snapshot_resolver=store.has)
+    ok(res["dropped"] == 2 and len(wal2.replay()) == 3,
+       f"compaction 应保留 barrier 之后（drop={res['dropped']}）")
+    ok(wal2.verify(), "compaction 后链仍自洽")
+    ok(len(res["hash_map"]) == 5, "compact 返回新旧 hash 映射（R6）")
+    # A1 守卫：边界行缺快照引用 → 拒绝压缩（快照未落盘前折叠历史=数据丢失）
+    wal3 = WALLog(None)
+    for i in range(5):
+        wal3.append("compaction_barrier" if i == 2 else "param", {"i": i})
+    res3 = wal3.compact()
+    ok(res3["dropped"] == 0 and len(wal3.replay()) == 5,
+       "边界行缺 snapshot_ref → 拒绝压缩（A1）")
 
     # 4. RevisionTable：同值不传播 / backdating 截断 / 失效比例策略
     dag3 = FlowDAG()
@@ -651,7 +723,7 @@ def _run_tests() -> None:
     ok(vp.fingerprint() != r0, "参数变了指纹必须变")
     fp_same = None
     vp.set_many({"Handle_Thickness": 0.0082})     # 量化后仍是 0.008 → 指纹不变
-    ok(vp.fingerprint(-2) == vp.fingerprint(-1) or True, "占位")
+    ok(vp.fingerprint(-2) == vp.fingerprint(-1), "量化同值指纹不变（R2 修复：原为 X or True 恒真占位）")
     ok(vp.revisions() == 3, "三个版本")
 
     # 6. 命令机械逆 + pivot

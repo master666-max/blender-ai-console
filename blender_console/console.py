@@ -37,8 +37,8 @@ from rig_compiler import RigConstraintError, compile_rig
 from gn_artifact import GNArtifact
 from render_diff import RenderDiffer
 from m1_core import (CycleError, FlowDAG, LogOnly, ParamUpdate, PivotBlocked,
-                     RevisionTable, SagaTag, SegmentCommits, StepRecord,
-                     VersionedParams, WALLog, export_state)
+                     RevisionTable, SagaTag, SegmentCommits, SnapshotStore,
+                     StepRecord, VersionedParams, WALLog, export_state)
 from plan_schema import PlanSchema
 
 __all__ = ["ConsoleResult", "Console", "ConsoleError"]
@@ -107,6 +107,10 @@ class Console:
         self.deps = self.bpy.context.evaluated_depsgraph_get()
         self.dag = FlowDAG()
         self.wal = WALLog(Path(workdir) / "events.jsonl" if workdir else None)
+        # A1（2026-09-28）：快照内容寻址落盘——checkpoint 的恢复前置条件。
+        # 无 workdir（内存模式）退化为进程内 dict，has/get/put 语义不变。
+        self.snapshots = SnapshotStore(
+            Path(workdir) / "snapshots" if workdir else None)
         self.table = RevisionTable(self.dag)
         self.vparams = VersionedParams()
         self.commits = SegmentCommits()
@@ -457,14 +461,30 @@ class Console:
 
     # ── GoodPoint（M3-2 / A14）───────────────────────────────
     def checkpoint(self, name: str, thought_refs: tuple[str, ...] = ()) -> ConsoleResult:
+        """GoodPoint（A1/A2 修复 · 2026-09-28）：快照内容寻址落盘。
+
+        mesh+params 序列化进 SnapshotStore（内容寻址去重）；WAL 行 kind 由
+        "checkpoint" 改 "restore_point"（A2：与 WALLog.compact 边界
+        "compaction_barrier" 拆分命名空间），payload 携带 snapshot_ref——
+        快照不在盘上时 compact 拒绝折叠历史（A1 守卫）。
+        诚实边界：崩溃后从 WAL+快照重建 console 的恢复 API 属后续工作，
+        本修复保证状态不再只存进程内存。
+        """
         t0 = time.perf_counter()
         self.deps.update()
         snap = self.ad.bpy.data.meshes.new_from_object(
             self.obj.evaluated_get(self.deps))
         dt = round((time.perf_counter() - t0) * 1000, 3)
-        self.checkpoints[name] = {"mesh": snap, "params": dict(self.vparams.get()),
-                                  "thought_refs": list(thought_refs)}
-        self.wal.append("checkpoint", {"name": name, "faces": len(snap.polygons)})
+        params = dict(self.vparams.get())
+        ref = self.snapshots.put({"verts": [tuple(v.co) for v in snap.vertices],
+                                  "polys": [tuple(p.vertices) for p in snap.polygons],
+                                  "params": params})
+        self.checkpoints[name] = {"mesh": snap, "params": params,
+                                  "thought_refs": list(thought_refs),
+                                  "snapshot_ref": ref}
+        self.wal.append("restore_point",
+                        {"name": name, "faces": len(snap.polygons),
+                         "snapshot_ref": ref})
         return self._ok("checkpoint",
             f"GoodPoint {name}: {len(snap.polygons)} 面，{dt} ms")
 

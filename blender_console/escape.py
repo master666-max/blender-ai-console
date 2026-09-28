@@ -32,6 +32,8 @@ _DENIED_NAMES = {"__import__", "eval", "exec", "compile", "globals", "locals",
                  "open", "input", "breakpoint", "vars", "dir", "getattr",
                  "setattr", "delattr", "sys", "os", "subprocess", "pathlib",
                  "requests", "urllib", "socket"}
+#: 危险子域前缀（C2b：延迟执行/外部数据载入逃逸面——2026-09-28 收口）
+_DENIED_SUBDOMAINS = ("bpy.app", "bpy.data.libraries")
 
 
 class EscapeError(Exception):
@@ -109,13 +111,23 @@ class ScriptAuditor:
         self.ops_cats = ops_categories or _ALLOWED_OPS_CATS
 
     def audit(self, code: str) -> tuple[bool, str, str]:
-        """→ (ok, sha16, reason)。ok=False 时 reason 给出首个违规（可返回给 AI 修复）。"""
+        """→ (ok, sha16, reason)。ok=False 时 reason 给出首个违规（可返回给 AI 修复）。
+
+        覆盖面（2026-09-28 C1/C2 收口后，六技能过码修复）：
+          * 节点白名单 + import 域根（_ALLOWED_ROOTS 为唯一真源）
+          * 禁用直接调用（_DENIED_NAMES）
+          * C1：下标取可调用再调用一律拒（元编程逃逸形态，角色域无合法用例）
+          * C2a：属性链逐段 dunder 过滤（__globals__/__class__/__builtins__…）
+          * C2b：危险子域前缀拒（bpy.app 延迟执行 / bpy.data.libraries 外部载入）
+          * Name 直接引用 dunder 同拒（deny-by-default 的一致性要求）
+          * bpy.ops 类别白名单
+        """
         try:
             tree = ast.parse(code)
         except SyntaxError as e:
             return False, "", f"语法错误：{e.msg}（line {e.lineno}）"
         sha = hashlib.sha256(code.encode("utf-8")).hexdigest()[:16]
-        DOMAIN_IMPORTS = {"bpy", "bmesh", "mathutils"}
+        DOMAIN_IMPORTS = {r.split(".")[0] for r in _ALLOWED_ROOTS}
         for node in ast.walk(tree):
             if type(node) not in _ALLOWED_NODES:
                 return False, sha, f"禁用语法节点 {type(node).__name__}（line {node.lineno}）"
@@ -134,6 +146,9 @@ class ScriptAuditor:
                 if isinstance(fn, ast.Name):
                     if fn.id in _DENIED_NAMES:
                         return False, sha, f"禁用调用 {fn.id}()（line {node.lineno}）"
+                elif isinstance(fn, ast.Subscript):        # C1：下标取可调用
+                    return False, sha, (f"禁用下标调用（line {node.lineno}）"
+                                        "——元编程逃逸形态，角色域无此需求")
             # bpy.ops 类别白名单（域白名单核心）：bpy.ops.<cat>.<name>
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 dotted = self._dotted(node.func)
@@ -144,8 +159,21 @@ class ScriptAuditor:
                                             f"（限 {sorted(self.ops_cats)}）")
             if isinstance(node, ast.Attribute):
                 dotted = self._dotted(node)
-                if dotted and dotted.split(".")[0] in _DENIED_NAMES:
-                    return False, sha, f"禁用引用 {dotted}（line {node.lineno}）"
+                if dotted:
+                    if dotted.split(".")[0] in _DENIED_NAMES:
+                        return False, sha, f"禁用引用 {dotted}（line {node.lineno}）"
+                    for sub in _DENIED_SUBDOMAINS:          # C2b
+                        if dotted == sub or dotted.startswith(sub + "."):
+                            return False, sha, (f"禁用子域 {sub}（line {node.lineno}）"
+                                                "——延迟执行/外部载入逃逸面")
+                    for part in dotted.split("."):          # C2a
+                        if part.startswith("__") and part.endswith("__"):
+                            return False, sha, (f"禁用 dunder 引用 {dotted}"
+                                                f"（line {node.lineno}）——元编程逃逸面")
+            elif isinstance(node, ast.Name):                # deny-by-default 一致性
+                if node.id.startswith("__") and node.id.endswith("__"):
+                    return False, sha, (f"禁用 dunder 名 {node.id}"
+                                        f"（line {node.lineno}）")
         return True, sha, ""
 
     @staticmethod
@@ -179,7 +207,12 @@ class EscapeHatch:
     def run_template(self, name: str, params: dict[str, Any],
                      actor: str = "ai") -> dict[str, Any]:
         """L2 模板执行：模板体预审，参数从 plan 来。"""
-        report = self.registry.run(name, params)
+        try:
+            report = self.registry.run(name, params)
+        except EscapeError as e:                       # R1：拒绝也要留痕
+            self.usage.append({"tier": "L2-rejected", "code": e.code,
+                               "template": name, "reason": e.reason, "actor": actor})
+            raise
         rec = {"tier": "L2", "template": name, "params": params,
                "report": report, "actor": actor}
         self.usage.append(rec)
@@ -190,11 +223,18 @@ class EscapeHatch:
         """L3 脚本执行：域白名单审查通过才落账（返回 shell 供调用方 exec——
         执行权在宿主/导演，不在本类：审计与执行分离是治理位外置的体现）。"""
         if not str(audited_by).startswith("human:"):
+            # R1：失败尝试更要留痕（安全审计纪律——拒绝路径零留痕=审查盲区）
+            self.usage.append({"tier": "L3-rejected", "code": "HATCH_AUDIT_REQUIRED",
+                               "reason": "缺人工审核标记 audited_by='human:...'",
+                               "sha16": "", "audited_by": audited_by, "label": label})
             raise EscapeError("L3 脚本必须带人工审核标记 audited_by='human:...'"
                               "（治理位外置：机器无权批准自由代码）",
                               code="HATCH_AUDIT_REQUIRED")
         ok, sha, reason = self.auditor.audit(code)
         if not ok:
+            self.usage.append({"tier": "L3-rejected", "code": "SCRIPT_AUDIT_FAIL",
+                               "reason": reason, "sha16": sha,
+                               "audited_by": audited_by, "label": label})
             raise EscapeError(f"脚本审查未过：{reason}", code="SCRIPT_AUDIT_FAIL",
                               suggestions=[{"action": "rewrite",
                                             "target": "code",

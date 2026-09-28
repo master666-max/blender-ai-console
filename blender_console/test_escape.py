@@ -87,6 +87,49 @@ for name, code in BAD_CASES:
     ok, sha, reason = aud.audit(code)
     check(f"{name} → 拦", lambda ok=ok: ok, False)
 
+# ── [2b] 绕过向量反例（C1/C2 回归护栏——2026-09-28 六技能过码补）────────
+# 来源：技能#2 superpowers-zh 真机 PoC 实锤 4 向量 + def 版 handler 真威胁形态。
+print("\n[2b] 绕过向量反例（C1/C2）")
+BYPASS_CASES = [
+    ("C1 Subscript 调用逃逸",
+     "def f(): pass\nf.__globals__['__builtins__']['eval']('1+1')"),
+    ("C1 纯下标取可调用", "d = {}\nd['k']()"),
+    ("C2 dunder 属性链", "x = 1\ny = x.__class__"),
+    ("C2 外部 blend 载入", "bpy.data.libraries.load('evil.blend')"),
+    ("C2 def 版 handler 注册",
+     "def on_load(scene):\n    pass\nbpy.app.handlers.load_post.append(on_load)"),
+    # lambda 版现状即拦（Lambda 不在 _ALLOWED_NODES——偶然防护非设计）；修复后
+    # 拦因应升级为 bpy.app 子域拒。本条为防回归护栏，不参与红绿循环。
+    ("C2 lambda 版 handler 注册",
+     "bpy.app.handlers.load_post.append(lambda s: None)"),
+]
+for name, code in BYPASS_CASES:
+    ok, sha, reason = aud.audit(code)
+    check(f"{name} → 拦", lambda ok=ok: ok, False)
+
+# ── [2c] 拒绝留痕（R1：失败尝试更要留痕——文件头 WAL 纪律的自洽要求）──
+print("\n[2c] 拒绝留痕")
+h2 = EscapeHatch(registry=reg)          # 干净实例，只计本段
+n0 = len(h2.usage)
+try:
+    h2.run_script("eval('1+1')", audited_by="human:r1", label="拒留痕")
+except EscapeError:
+    pass
+check("审查未过 → 拒绝留痕", lambda: len(h2.usage), n0 + 1)
+check("拒绝记录带 code+reason",
+      lambda: bool(h2.usage[-1].get("code")) and bool(h2.usage[-1].get("reason")),
+      True)
+try:
+    h2.run_script(OK_SCRIPT, audited_by="ai:auto")
+except EscapeError:
+    pass
+check("缺 human 标记 → 拒绝留痕", lambda: len(h2.usage), n0 + 2)
+try:
+    h2.run_template("rig_basic_spine", {})      # 缺参（count 未传）
+except EscapeError:
+    pass
+check("模板缺参 → 拒绝留痕", lambda: len(h2.usage), n0 + 3)
+
 OK2 = "b = bpy.data.armatures.new('X')"
 check("bpy.data.armatures 域内过", lambda: aud.audit(OK2)[0], True)
 
@@ -97,7 +140,10 @@ expect_code("无 human 审核标记 → HATCH_AUDIT_REQUIRED",
             "HATCH_AUDIT_REQUIRED")
 r = hatch.run_script(OK_SCRIPT, audited_by="human:reviewer", label="rig试")
 check("human 审核标记通过", lambda: r["ok"], True)
-check("usage 留痕（审计链）", lambda: len(hatch.usage), 2)
+# R1 语义升级（2026-09-28）：所有拒绝路径都留痕——[1] 段 TEMPLATE_NOT_FOUND /
+# TEMPLATE_PARAM_MISSING 两个拒绝 + [3] 段 HATCH_AUDIT_REQUIRED 拒绝 + 成功 2 条 = 5。
+# 失败尝试更要留痕是安全审计纪律（技能1 R1：拒绝路径零留痕与文件头纪律矛盾）。
+check("usage 留痕（成功2+拒绝3，R1 全覆盖）", lambda: len(hatch.usage), 5)
 
 failed = [r for r in ROWS if not r["ok"]]
 print(f"\nM4-4 ESCAPE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
