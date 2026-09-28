@@ -1,150 +1,556 @@
 {
-  "schema": "mug-console-state/1.1",
-  "mode": "INCREMENTAL",
-  "steps": [
-    {
-      "id": "s1",
-      "seg": "S1_杯体",
-      "obj": "Mug",
-      "deps": [],
-      "thought_refs": [],
-      "params": {
-        "Body_Radius": 0.04,
-        "Body_Depth": 0.095
-      }
-    },
-    {
-      "id": "s2",
-      "seg": "S2_把手",
-      "obj": "Handle",
-      "deps": [
-        "s1"
-      ],
-      "thought_refs": [
-        "T1"
-      ],
-      "params": {
-        "Handle_Ring_Radius": 0.032,
-        "Handle_Thickness": 0.007
-      }
-    },
-    {
-      "id": "s3",
-      "seg": "S3_收尾",
-      "obj": "Mug",
-      "deps": [
-        "s2"
-      ],
-      "thought_refs": [
-        "T2"
-      ],
-      "params": {
-        "Subdiv_Level": 2
-      }
-    }
-  ],
-  "segments": {
-    "S1_杯体": {
-      "steps": [
-        "s1"
-      ],
-      "revision": 3,
-      "dirty": false,
-      "output_hash": "3f9c…a1"
-    },
-    "S2_把手": {
-      "steps": [
-        "s2"
-      ],
-      "revision": 5,
-      "dirty": false,
-      "output_hash": "8d11…7e"
-    },
-    "S3_收尾": {
-      "steps": [
-        "s3"
-      ],
-      "revision": 6,
-      "dirty": true,
-      "output_hash": ""
-    }
+ "schema": "mug-console-state/1.1",
+ "steps": [
+  {
+   "id": "1.1",
+   "seg": "车体装甲盒",
+   "obj": "L1",
+   "deps": [],
+   "thought_refs": [],
+   "params": {}
   },
-  "revisions": {
-    "S1_杯体": {
-      "param_fp": "b21c",
-      "output_hash": "3f9c…a1",
-      "revision": 3,
-      "dirty": false
-    },
-    "S2_把手": {
-      "param_fp": "77aa",
-      "output_hash": "8d11…7e",
-      "revision": 5,
-      "dirty": false
-    },
-    "S3_收尾": {
-      "param_fp": "c0de",
-      "output_hash": "",
-      "revision": 6,
-      "dirty": true
-    }
+  {
+   "id": "1.2",
+   "seg": "行走机构",
+   "obj": "L1",
+   "deps": [
+    "1.1"
+   ],
+   "thought_refs": [],
+   "params": {}
   },
-  "params": {
-    "Body_Radius": 0.04,
-    "Body_Depth": 0.095,
-    "Handle_Ring_Radius": 0.032,
-    "Handle_Thickness": 0.007,
-    "Subdiv_Level": 2
+  {
+   "id": "1.3",
+   "seg": "履带",
+   "obj": "L1",
+   "deps": [
+    "1.2"
+   ],
+   "thought_refs": [],
+   "params": {}
   },
-  "commits": {
-    "S1_杯体": "c0a1f3",
-    "S2_把手": "cf229b",
-    "S3_收尾": "c9d3e0"
+  {
+   "id": "1.4",
+   "seg": "动力舱格栅",
+   "obj": "L1",
+   "deps": [
+    "1.1"
+   ],
+   "thought_refs": [],
+   "params": {}
   },
-  "goodpoints": [
-    {
-      "name": "GP1",
-      "step_id": "s3",
-      "thought_refs": [
-        "T1",
-        "T2"
-      ],
-      "note": "初始版通过（把手 7mm）"
-    }
-  ],
-  "thoughts": [
-    {
-      "id": "T1",
-      "claim": "把手粗 7mm 握感舒适",
-      "kind": "assumption",
-      "status": "ACTIVE"
-    },
-    {
-      "id": "T2",
-      "claim": "细分 2 级足够圆滑",
-      "kind": "decision",
-      "status": "ACTIVE"
-    }
-  ],
-  "kpis": {
-    "override_rate": 0.3333,
-    "overrides": 1,
-    "ab_decisions": 3,
-    "dirty_segments": 1,
-    "verify_fails": 1,
-    "override_curve": [
-      {
-        "n": 1,
-        "rate": 0.0
-      },
-      {
-        "n": 2,
-        "rate": 0.0
-      },
-      {
-        "n": 3,
-        "rate": 0.3333
-      }
-    ]
+  {
+   "id": "2.1",
+   "seg": "炮塔",
+   "obj": "L2",
+   "deps": [
+    "1.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "2.2",
+   "seg": "主炮",
+   "obj": "L2",
+   "deps": [
+    "2.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "2.3",
+   "seg": "同轴机枪",
+   "obj": "L2",
+   "deps": [
+    "2.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "2.4",
+   "seg": "舱门",
+   "obj": "L2",
+   "deps": [
+    "2.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "2.5",
+   "seg": "防盾",
+   "obj": "L2",
+   "deps": [
+    "2.1",
+    "2.2"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "3.1",
+   "seg": "整体比例",
+   "obj": "L3",
+   "deps": [
+    "1.1",
+    "2.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "3.2",
+   "seg": "装甲垂直面",
+   "obj": "L3",
+   "deps": [
+    "1.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "3.3",
+   "seg": "细节挂载",
+   "obj": "L3",
+   "deps": [
+    "1.1",
+    "3.2"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "4.1",
+   "seg": "迷彩",
+   "obj": "L4",
+   "deps": [
+    "3.1"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "4.2",
+   "seg": "旧化",
+   "obj": "L4",
+   "deps": [
+    "4.1",
+    "1.3",
+    "1.4"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "5.1",
+   "seg": "展台",
+   "obj": "L5",
+   "deps": [
+    "1.3",
+    "1.4",
+    "2.5",
+    "3.3",
+    "4.2"
+   ],
+   "thought_refs": [],
+   "params": {}
+  },
+  {
+   "id": "1.5",
+   "seg": "排气系统",
+   "obj": "L1",
+   "deps": [
+    "1.1"
+   ],
+   "thought_refs": [],
+   "params": {}
   }
+ ],
+ "segments": {
+  "车体装甲盒": {
+   "steps": [
+    "1.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "行走机构": {
+   "steps": [
+    "1.2"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "动力舱格栅": {
+   "steps": [
+    "1.4"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "排气系统": {
+   "steps": [
+    "1.5"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "炮塔": {
+   "steps": [
+    "2.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "装甲垂直面": {
+   "steps": [
+    "3.2"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "履带": {
+   "steps": [
+    "1.3"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "主炮": {
+   "steps": [
+    "2.2"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "同轴机枪": {
+   "steps": [
+    "2.3"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "舱门": {
+   "steps": [
+    "2.4"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "整体比例": {
+   "steps": [
+    "3.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "细节挂载": {
+   "steps": [
+    "3.3"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "防盾": {
+   "steps": [
+    "2.5"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "迷彩": {
+   "steps": [
+    "4.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "旧化": {
+   "steps": [
+    "4.2"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  },
+  "展台": {
+   "steps": [
+    "5.1"
+   ],
+   "revision": 0,
+   "dirty": false,
+   "output_hash": ""
+  }
+ },
+ "revisions": {
+  "车体装甲盒": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "1.1": {
+   "param_fp": "fp_1.1",
+   "output_hash": "",
+   "revision": 1,
+   "dirty": true
+  },
+  "行走机构": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "1.2": {
+   "param_fp": "fp_1.2",
+   "output_hash": "",
+   "revision": 2,
+   "dirty": true
+  },
+  "履带": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "1.3": {
+   "param_fp": "fp_1.3",
+   "output_hash": "",
+   "revision": 3,
+   "dirty": true
+  },
+  "动力舱格栅": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "1.4": {
+   "param_fp": "fp_1.4",
+   "output_hash": "",
+   "revision": 4,
+   "dirty": true
+  },
+  "炮塔": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "2.1": {
+   "param_fp": "fp_2.1",
+   "output_hash": "",
+   "revision": 5,
+   "dirty": true
+  },
+  "主炮": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "2.2": {
+   "param_fp": "fp_2.2",
+   "output_hash": "",
+   "revision": 6,
+   "dirty": true
+  },
+  "同轴机枪": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "2.3": {
+   "param_fp": "fp_2.3",
+   "output_hash": "",
+   "revision": 7,
+   "dirty": true
+  },
+  "舱门": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "2.4": {
+   "param_fp": "fp_2.4",
+   "output_hash": "",
+   "revision": 8,
+   "dirty": true
+  },
+  "防盾": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "2.5": {
+   "param_fp": "fp_2.5",
+   "output_hash": "",
+   "revision": 9,
+   "dirty": true
+  },
+  "整体比例": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "3.1": {
+   "param_fp": "fp_3.1",
+   "output_hash": "",
+   "revision": 10,
+   "dirty": true
+  },
+  "装甲垂直面": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "3.2": {
+   "param_fp": "fp_3.2",
+   "output_hash": "",
+   "revision": 11,
+   "dirty": true
+  },
+  "细节挂载": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "3.3": {
+   "param_fp": "fp_3.3",
+   "output_hash": "",
+   "revision": 12,
+   "dirty": true
+  },
+  "迷彩": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "4.1": {
+   "param_fp": "fp_4.1",
+   "output_hash": "",
+   "revision": 13,
+   "dirty": true
+  },
+  "旧化": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "4.2": {
+   "param_fp": "fp_4.2",
+   "output_hash": "",
+   "revision": 14,
+   "dirty": true
+  },
+  "展台": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "5.1": {
+   "param_fp": "fp_5.1",
+   "output_hash": "",
+   "revision": 15,
+   "dirty": true
+  },
+  "排气系统": {
+   "param_fp": "",
+   "output_hash": "",
+   "revision": 0,
+   "dirty": false
+  },
+  "1.5": {
+   "param_fp": "fp_1.5",
+   "output_hash": "",
+   "revision": 16,
+   "dirty": true
+  }
+ },
+ "mode": "FULL",
+ "params": {
+  "Front_Armor": 0.102,
+  "Side_Armor": 0.082,
+  "Gun_Caliber": 0.088,
+  "1.1.built": 1.0,
+  "1.2.built": 1.0,
+  "1.3.built": 1.0,
+  "1.4.built": 1.0,
+  "2.1.built": 1.0,
+  "2.2.built": 1.0,
+  "2.3.built": 1.0,
+  "2.4.built": 1.0,
+  "2.5.built": 1.0,
+  "3.1.built": 1.0,
+  "3.2.built": 1.0,
+  "3.3.built": 1.0,
+  "4.1.built": 1.0,
+  "4.2.built": 1.0,
+  "5.1.built": 1.0,
+  "1.5.built": 1.0
+ },
+ "commits": {
+  "车体装甲盒": null,
+  "行走机构": null,
+  "动力舱格栅": null,
+  "排气系统": null,
+  "炮塔": null,
+  "装甲垂直面": null,
+  "履带": null,
+  "主炮": null,
+  "同轴机枪": null,
+  "舱门": null,
+  "整体比例": null,
+  "细节挂载": null,
+  "防盾": null,
+  "迷彩": null,
+  "旧化": null,
+  "展台": null
+ },
+ "goodpoints": [
+  {
+   "name": "GP-底盘完成",
+   "step_id": "1.3",
+   "thought_refs": [],
+   "note": "虎式底盘+行走机构通过"
+  },
+  {
+   "name": "GP-炮塔武器",
+   "step_id": "2.5",
+   "thought_refs": [],
+   "note": "炮塔+主炮+防盾通过"
+  }
+ ],
+ "kpis": {
+  "override_rate": 0.0,
+  "overrides": 0,
+  "ab_decisions": 0,
+  "dirty_segments": 0
+ }
 }
