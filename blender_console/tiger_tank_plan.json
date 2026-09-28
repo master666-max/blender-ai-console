@@ -26,7 +26,27 @@
      "type": "FLOAT",
      "value": 85.71
     }
-   ]
+   ],
+   "operand": {
+    "op": "cube",
+    "parameters": [
+     {
+      "name": "Cavity_X",
+      "type": "FLOAT",
+      "value": 170.0
+     },
+     {
+      "name": "Cavity_Y",
+      "type": "FLOAT",
+      "value": 90.0
+     },
+     {
+      "name": "Cavity_Z",
+      "type": "FLOAT",
+      "value": 80.0
+     }
+    ]
+   }
   },
   {
    "id": "1.2",
