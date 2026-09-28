@@ -26,8 +26,30 @@ __all__ = ["IntakeSession", "DOMAIN_BANK"]
 MODES = ("direct", "quick", "full", "unlimited")
 _DOMAINS = ("物理", "功能", "视觉", "工程", "叙事")
 
+
+def _match_topic(brief: str) -> str:
+    """brief 关键词 → 域前缀（""= 默认马克杯域；"坦克"= 坦克分册）。M6 域模板化。"""
+    b = (brief or "").lower()
+    if "坦克" in b or "tank" in b or "装甲" in b or "虎式" in b:
+        return "坦克"
+    return ""
+
 # ── 域问题库（通用骨架；具体项目可替换）─────────────────────
 DOMAIN_BANK: dict[str, list[dict[str, Any]]] = {
+    "坦克物理": [
+        {"field": "length_real", "question": "车体长度（不含炮管）？",
+         "default": 6320, "unit": "mm", "range": [5000, 8000],
+         "why": "虎式 6.32m 实尺"},
+        {"field": "front_armor", "question": "正面装甲厚度？",
+         "default": 102, "unit": "mm", "range": [80, 120],
+         "why": "虎式正面 102mm 垂直装甲"},
+        {"field": "roadwheel_per_side", "question": "单侧负重轮数（交错排列）？",
+         "default": 8, "unit": "只", "range": [6, 10],
+         "why": "虎式 Schachtellaufwerk 8/侧"},
+        {"field": "gun_caliber", "question": "主炮口径？",
+         "default": 88, "unit": "mm", "range": [75, 128],
+         "why": "KwK.36 L/56 88mm"},
+    ],
     "物理": [
         {"field": "size_height", "question": "整体高度大约多少？",
          "default": 0.095, "unit": "m", "range": [0.02, 0.5],
@@ -36,9 +58,21 @@ DOMAIN_BANK: dict[str, list[dict[str, Any]]] = {
          "default": 0.004, "unit": "m", "range": [0.002, 0.02],
          "why": "4mm 兼顾手感与保温"},
     ],
+    "坦克功能": [
+        {"field": "turret_rotate", "question": "炮塔可旋转吗？",
+         "default": True, "why": "坦克炮塔360度"},
+        {"field": "hatch_open", "question": "舱门可开吗？",
+         "default": True, "why": "指挥官舱门+装填手舱门"},
+    ],
     "功能": [
         {"field": "with_lid", "question": "需要盖子吗？",
          "default": False, "options": [True, False], "why": "多数马克杯不带盖"},
+    ],
+    "坦克视觉": [
+        {"field": "camo_scheme", "question": "涂装方案？",
+         "default": "Dunkelgelb+Olivgrun", "why": "1944 后期型涂装"},
+        {"field": "weathering_level", "question": "旧化程度？",
+         "default": "medium", "why": "履带锈蚀+排气烟熏是虎式特征"},
     ],
     "视觉": [
         {"field": "handle_style", "question": "把手什么形态？",
@@ -76,8 +110,9 @@ class IntakeSession:
         self.parts = parts or ["mug"]     # 部件路径（M7-2 part 的来源）
         self.scene_facts = dict(scene_facts or {})
         self.fields: dict[str, dict[str, Any]] = {}   # field → {value, origin, why}
-        self.domain_done: dict[str, int] = {d: 0 for d in _DOMAINS}
-        self.domain_state = {d: "open" for d in _DOMAINS}
+        self.topic = _match_topic(brief)
+        self.domain_done: dict[str, int] = {f"{self.topic}{d}": 0 for d in _DOMAINS}
+        self.domain_state = {f"{self.topic}{d}": "open" for d in _DOMAINS}
         self.round = 0
         self.frozen = False
         self.frozen_at = ""
@@ -93,9 +128,10 @@ class IntakeSession:
     def _pending_questions(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         for dom in _DOMAINS:
-            if self.domain_state[dom] == "done":
+            key = f"{self.topic}{dom}"
+            if self.domain_state.get(key, "open") == "done":
                 continue
-            for q in DOMAIN_BANK.get(dom, []):
+            for q in DOMAIN_BANK.get(key, []):
                 f = q["field"]
                 if f in self.fields:
                     continue

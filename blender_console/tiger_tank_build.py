@@ -96,7 +96,7 @@ def box(name, sx, sy, sz, loc, mat=None, rot=(0, 0, 0)):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
     o = bpy.context.active_object
     o.name = name
-    o.scale = (sx / 2, sy / 2, sz / 2)
+    o.scale = (sx, sy, sz)          # size=1 棱柱：dimensions == scale（目标尺寸）
     if mat:
         o.data.materials.append(mat)
     return o
@@ -276,8 +276,8 @@ def pred(name, actual, expect, tol_mm):
     return ok
 
 _hull = bpy.data.objects.get("hull_lower")
-pred("hull_length", _hull.dimensions.x * 1000, 6320.0, 2.0)
-pred("hull_height_total", h_mm, 3000.0, 2.0)
+pred("hull_length", _hull.dimensions.x * 1000, at35(6320) * 1000, 2.0)
+pred("hull_height_total", h_mm, at35(3000) * 1000, 2.0)
 _n_rw = len([o for o in bpy.data.objects if o.name.startswith("roadwheel")])
 _pred_results.append({"predicate": "roadwheel_count", "actual": _n_rw, "expect": 16, "ok": _n_rw == 16})
 print("[gate-spec] 谓词执行结果:")
@@ -300,9 +300,12 @@ for _nid in order:
                  "node": _nid, "build_op": _op, "params_mm": _mm},
         attention=_att[:120], story=_story[:600],
         params=_mm, evidence=[_GATE_JSON[:400]])
-    if runner.byid[_nid]["status"] == "pending":
+    _st = runner.byid[_nid]["status"]
+    if _st == "pending":
         runner.start(_nid)
-    runner.pass_gate(_nid, evidence="gate + render")
+        runner.pass_gate(_nid, evidence="gate + render")
+    elif _st == "passed":
+        pass                       # 幂等：状态机回写后重跑不重复过门
 print("[rag-record] 沉淀 %d 条节点经验 -> %s" % (len(order), LIB_PATH.name))
 print("[runner] progress:", runner.progress())
 for _n in lt["nodes"]:
