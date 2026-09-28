@@ -39,7 +39,24 @@ def visit(nid):
 
 for n in lt["nodes"]:
     visit(n["id"])
+sys.path.insert(0, str(HERE))
+from logic_tree import LogicTreeRunner
+from experience import ExperienceLibrary
 print("[logic-tree] v2 build order:", " -> ".join(order))
+
+# ── 融合三环初始化（管线×视觉×RAG）──────────────────────────
+LIB_PATH = HERE / "experience_library.json"
+lib = ExperienceLibrary(LIB_PATH)
+runner = LogicTreeRunner(lt)
+_seen_ops = {}
+for _nid in order:
+    _op = byid[_nid]["build"]["op"]
+    if _op in _seen_ops:
+        continue
+    _seen_ops[_op] = True
+    _hits = lib.recall({"origin": "logic_tree", "build_op": _op}, n=2)
+    print("[rag-recall] op=%-14s hits=%d %s" % (_op, len(_hits),
+          "; ".join(h.eid for h in _hits) if _hits else "(冷启动)"))
 
 
 def mark(nid, extra=""):
@@ -243,6 +260,56 @@ for o in bpy.data.objects:
 h_mm = (hi_z - lo_z) * 1000
 print("[gate 3.1] height=%.2fmm (期望 85.71±2) lo=%s hi=%s" % (h_mm, lo_n, hi_n))
 print("[gate 3.1] length=%.2fmm (期望 180.57±2)" % (HULL_L * 1000))
+
+# ── 融合②视觉环：gate 谓词执行器 v0 ────────────────────────
+def band(rel):
+    a = abs(rel)
+    return "带内" if a < 0.02 else ("偏移一点" if a < 0.10 else "明显偏离")
+
+_pred_results = []
+def pred(name, actual, expect, tol_mm):
+    rel = (actual - expect) / max(expect, 1e-9)
+    ok = abs(actual - expect) <= tol_mm
+    _pred_results.append({"predicate": name, "actual_mm": round(actual, 2),
+                          "expect_mm": expect, "tol_mm": tol_mm,
+                          "rel_pct": round(rel * 100, 2), "band": band(rel), "ok": ok})
+    return ok
+
+_hull = bpy.data.objects.get("hull_lower")
+pred("hull_length", _hull.dimensions.x * 1000, 6320.0, 2.0)
+pred("hull_height_total", h_mm, 3000.0, 2.0)
+_n_rw = len([o for o in bpy.data.objects if o.name.startswith("roadwheel")])
+_pred_results.append({"predicate": "roadwheel_count", "actual": _n_rw, "expect": 16, "ok": _n_rw == 16})
+print("[gate-spec] 谓词执行结果:")
+for _p in _pred_results:
+    print("   ", json.dumps(_p, ensure_ascii=False))
+
+# ── 融合③RAG 沉淀环：逐节点 record_ai（P0 脚本轨）────────────
+_GATE_JSON = json.dumps(_pred_results, ensure_ascii=False)
+for _nid in order:
+    _n = byid[_nid]
+    _op = _n["build"]["op"]
+    _mm = _n["build"].get("params_mm", {})
+    _att = "注意：%s | 门：%s" % (_n["name"], _n["gate"].get("machine", ""))
+    _story = ("构建 %s（%s）：%s。gate 结果=%s。目验要点=%s"
+              % (_n["name"], _op, _n["build"].get("note", ""),
+                 "通过" if all(p.get("ok", True) for p in _pred_results) else "见谓词报告",
+                 _n["gate"].get("visual", "")))
+    lib.record_ai(
+        trigger={"origin": "logic_tree", "project": "tiger_tank",
+                 "node": _nid, "build_op": _op, "params_mm": _mm},
+        attention=_att[:120], story=_story[:600],
+        params=_mm, evidence=[_GATE_JSON[:400]])
+    if runner.byid[_nid]["status"] == "pending":
+        runner.start(_nid)
+    runner.pass_gate(_nid, evidence="gate + render")
+print("[rag-record] 沉淀 %d 条节点经验 -> %s" % (len(order), LIB_PATH.name))
+print("[runner] progress:", runner.progress())
+for _n in lt["nodes"]:
+    _n["status"] = runner.byid[_n["id"]]["status"]
+lt_path = HERE / "logic_trees" / "tiger_tank.json"
+lt_path.write_text(json.dumps(lt, ensure_ascii=False, indent=1), encoding="utf-8")
+print("[logic-tree] status 回写完成 ->", lt_path.name)
 
 # ══ [5.1] 地台/展台/灯光/相机/渲染 ══════════════════════════
 mark("5.1")

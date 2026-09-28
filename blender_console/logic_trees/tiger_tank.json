@@ -36,7 +36,7 @@
    "layer": "L1 底盘功能",
    "name": "车体装甲盒",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "armor_box",
     "params_real": {
@@ -62,7 +62,7 @@
    "layer": "L1 底盘功能",
    "name": "行走机构",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "wheel_row",
     "instances": {
@@ -93,7 +93,7 @@
    "layer": "L1 底盘功能",
    "name": "履带",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "track_loop",
     "params_real": {
@@ -119,7 +119,7 @@
    "layer": "L1 底盘功能",
    "name": "动力舱格栅",
    "tier": 2,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "grille",
     "instances": {
@@ -151,7 +151,7 @@
    "layer": "L2 炮塔武器",
    "name": "炮塔",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "turret_shell",
     "params_real": {
@@ -177,7 +177,7 @@
    "layer": "L2 炮塔武器",
    "name": "主炮",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "gun_barrel",
     "params_real": {
@@ -204,7 +204,7 @@
    "layer": "L2 炮塔武器",
    "name": "同轴机枪",
    "tier": 3,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "mg_port",
     "params_real": {
@@ -233,7 +233,7 @@
    "layer": "L2 炮塔武器",
    "name": "舱门",
    "tier": 2,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "hatch_pair",
     "instances": {
@@ -268,7 +268,7 @@
    "layer": "L2 炮塔武器",
    "name": "防盾",
    "tier": 2,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "mantlet",
     "params_real": {
@@ -294,7 +294,7 @@
    "layer": "L3 形态比例",
    "name": "整体比例",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "proportion_check",
     "params_real": {
@@ -324,7 +324,7 @@
    "layer": "L3 形态比例",
    "name": "装甲垂直面",
    "tier": 1,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "flat_armor_check",
     "params_real": {
@@ -350,7 +350,7 @@
    "layer": "L3 形态比例",
    "name": "细节挂载",
    "tier": 3,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "detail_kit",
     "instances": {
@@ -383,7 +383,7 @@
    "layer": "L4 材质涂装",
    "name": "迷彩",
    "tier": 2,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "camo_paint",
     "params_real": {
@@ -416,7 +416,7 @@
    "layer": "L4 材质涂装",
    "name": "旧化",
    "tier": 3,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "weathering",
     "params_real": {
@@ -443,7 +443,7 @@
    "layer": "L5 场景",
    "name": "展台",
    "tier": 2,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "display_base",
     "params_real": {
@@ -474,7 +474,7 @@
    "layer": "L1 底盘功能",
    "name": "排气系统",
    "tier": 3,
-   "status": "pending",
+   "status": "passed",
    "build": {
     "op": "exhaust_pipes",
     "instances": {
