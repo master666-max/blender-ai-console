@@ -1,0 +1,70 @@
+{
+  "object": "mug",
+  "prompt": "做一个经典 350ml 陶瓷马克杯",
+  "meta": {
+    "purpose": "AI 侧 plan 分解模板 + 人侧质量门清单（同一棵树，两侧行走：AI 按节点编译、门禁按判据拦截）",
+    "tier_rules": {
+      "tier1": "判据不可降格（门禁数值），省略门须留痕",
+      "tier2": "默认打法（build 字段），允许声明式偏离",
+      "tier3": "条件表（visual 备注），按适用取用"
+    },
+    "gate_format": "目验门与机验门同构：证据在图 / 判据在册 / 结论可追溯；修正指令必须引用所见，禁止无归因的'再调调'",
+    "reference_source": "电商实售规格四例（2026-09-28 检索：350ml / 高 95 口径 80 / 杯柄宽 14 / 柄身距 30 / 含把宽 135-140）",
+    "units": "mm（JSON 内注释性字段），建模脚本按 m"
+  },
+  "reference": {
+    "capacity_ml": 350,
+    "height_mm": 95,
+    "diameter_mm": 80,
+    "wall_mm": [5.0, 6.0],
+    "bottom_mm": [8.0, 10.0],
+    "handle_strap_mm": 14,
+    "handle_gap_mm": 30,
+    "handle_total_depth_mm": 45,
+    "handle_span_pct": [30, 70]
+  },
+  "nodes": [
+    {"id": "1.1", "layer": "L1 容器功能", "name": "凹腔（能盛水）",
+     "build": "内腔刀 EXACT boolean，刀顶必须穿出口沿（贴面不融合教训），刀底留底厚",
+     "gate": {"machine": "容量 >= 320ml（水位口沿下 5mm，解析体积由求值网格半径反算）", "visual": "口沿下内壁无穿帮破面"}},
+    {"id": "1.2", "layer": "L1 容器功能", "name": "壁厚",
+     "build": "外壁 R40 / 内腔 R34.5 → 壁 5.5mm 落 [5,6] 区间",
+     "gate": {"machine": "射线采样壁厚 p05..p95 ⊆ [4,7]mm", "visual": "壁厚均匀无局部鼓包"}},
+    {"id": "1.3", "layer": "L1 容器功能", "name": "底封闭",
+     "build": "内腔刀底 z=-38.5，底厚 9mm 落 [8,10]",
+     "gate": {"machine": "底厚 ∈ [8,10]mm 且 calc_volume > 0（闭合实体）", "visual": "底足站立无悬浮感"}},
+    {"id": "2.1", "layer": "L2 人机", "name": "把手指孔",
+     "build": "椭圆弧管：水平半轴 21 / 竖直半轴 19 / 管半径 7，端点嵌入杯壁 4mm",
+     "gate": {"machine": "指孔净空 >= 28mm（管中心最外 - 管半径 - 外壁半径）", "visual": "三指可穿"}},
+    {"id": "2.2", "layer": "L2 人机", "name": "把手截面",
+     "build": "curve bevel 圆 profile 半径 7mm → 截面宽 14mm",
+     "gate": {"machine": "管径 ∈ [12,16]mm", "visual": "衔接无台阶"}},
+    {"id": "2.3", "layer": "L2 人机", "name": "把手位置",
+     "build": "弧端点 z=±19 → 跨度 30%~70% 杯高",
+     "gate": {"machine": "跨度百分比 ∈ [28,72]", "visual": "端点衔接在杯身轮廓内"}},
+    {"id": "2.4", "layer": "L2 人机", "name": "握持外凸",
+     "build": "外凸总深 45mm = 指孔 31 + 管径 14",
+     "gate": {"machine": "含把总宽 ∈ [125,150]mm", "visual": "外凸不碍掌、不碰桌面"}},
+    {"id": "3.1", "layer": "L3 形态", "name": "整体比例",
+     "build": "高 95 / 口径 80（底微收 76）",
+     "gate": {"machine": "高:径 ∈ [1.09, 1.29]", "visual": "剪影即马克杯（G1 铁门禁）"}},
+    {"id": "3.2", "layer": "L3 形态", "name": "口沿",
+     "build": "bevel 2.5mm @ 25° 限角 → 沿厚 ~4mm 圆润收边",
+     "gate": {"machine": "口沿有倒角（bevel 段存在）", "visual": "口沿圆润高光连续"}},
+    {"id": "3.3", "layer": "L3 形态", "name": "底足",
+     "build": "底微收 4mm（38→76 直径差的视觉余量）",
+     "gate": {"machine": "质心 xy 投影 ⊂ 底面圆", "visual": "放置稳定"}},
+    {"id": "4.1", "layer": "L4 材质呈现", "name": "釉面",
+     "build": "Principled 白瓷 rough 0.32 + coat 0.8",
+     "gate": {"machine": "材质节点参数在册", "visual": "高光带连续不塑料"}},
+    {"id": "4.2", "layer": "L4 材质呈现", "name": "影调",
+     "build": "深棚三点光 key 300 / fill 25 / rim 500 + Filmic 中高对比",
+     "gate": {"machine": "渲染谓词：非空 + 有方差", "visual": "轮廓自背景跳出"}}
+  ],
+  "gates": {
+    "G1": {"type": "目验（铁门禁）", "when": "Blockout 后", "criterion": "正交剪影可辨认 = 马克杯；未过关禁止一切细节"},
+    "G2": {"type": "目验", "when": "细节后", "criterion": "把手段差、口沿高光、底足站姿——所见无待修项（清单化，不接受整体印象）"},
+    "G3": {"type": "机验", "when": "交付前", "criterion": "nodes 内全部 machine 判据逐项真实通过，数字落 result"},
+    "G4": {"type": "机验", "when": "交付", "criterion": "呈现档渲染谓词（非空+方差）+ PNG 落盘回读"}
+  }
+}

@@ -1,0 +1,31 @@
+{"ts": 1790565765.539, "actor": "AI", "act": "session:start", "detail": "逻辑树驱动马克杯 v3（树=mug.json 12 节点 / 门 G1-G4 / 参考规格 350ml 高95 口径80）", "gate": "", "ok": true}
+{"ts": 1790565765.556, "actor": "AI", "act": "build:3.1", "detail": "杯身锥台 192 边：底 R38 / 口 R40 × 高 95mm（微收底，树 3.1/3.3；origin 归零 本地=世界）", "gate": "", "ok": true}
+{"ts": 1790565765.694, "actor": "AI", "act": "build:1.1+1.3", "detail": "内腔刀锥台 R33.8→R35.6 × 89mm（z 8→97：顶穿出口沿 2mm 防共面，底厚 8mm）｜偏离声明：树 1.2 build 写内腔 R34.5 圆柱，圆柱内腔与容量/壁厚双门禁冲突，改跟随外壁锥度（tier2 声明式偏离，判据 [4,7] 不降格）", "gate": "", "ok": true}
+{"ts": 1790565765.829, "actor": "AI", "act": "build:2.1-2.4", "detail": "椭圆弧弯管把手：中心 x=36+42·cosφ（端点 36 嵌壁 / 弧顶 78）/ 竖直 ±19mm / 管 R7；端点 z=28.5-66.5 = 杯高 30%-70%（树 2.3）；EXACT 融合", "gate": "", "ok": true}
+{"ts": 1790565765.917, "actor": "AI", "act": "build:3.2", "detail": "口沿 bevel 2.0mm @25° 三段｜偏离声明：树 build 写 2.5mm，口沿实测厚 4.44mm，2.5 单边会击穿，收敛 2.0（判据'bevel 段存在'不降格）", "gate": "", "ok": true}
+{"ts": 1790565766.073, "actor": "AI", "act": "build:shade", "detail": "shade auto smooth 30°（杯身+把手融合体统一着色）", "gate": "", "ok": true}
+{"ts": 1790565766.08, "actor": "AI", "act": "build:4.1", "detail": "白瓷 Principled：base(0.93,0.92,0.90) rough 0.32 + coat 0.8", "gate": "", "ok": true}
+{"ts": 1790565766.086, "actor": "AI", "act": "build:4.2", "detail": "深棚 world(0.03)+地板(0.13)+Filmic + MHC -0.7EV；三点光由 presentation.rig_three_point 注入", "gate": "", "ok": true}
+{"ts": 1790565768.458, "actor": "AI", "act": "gate", "detail": "G1 剪影落盘（目验铁门） -> PASS | mug-silhouette.png 512² 前景占比 33.8%（非空谓词）；人侧目验判据：剪影即马克杯（杯身+竖椭圆把手可辨）——证据在图，判据在树 G1", "gate": "G1 剪影落盘（目验铁门）", "ok": true}
+{"ts": 1790565768.461, "actor": "AI", "act": "gate:G1", "detail": "剪影帧落盘，机侧仅证非空，'可辨认=马克杯'留给目验（不越权代判）", "gate": "G1", "ok": true}
+{"ts": 1790565768.505, "actor": "AI", "act": "gate", "detail": "1.3 底厚 ∈ [8,10]mm 且实体闭合 -> PASS | 底厚 8.0mm（射线 2 命中），体积 140ml > 0", "gate": "1.3 底厚 ∈ [8,10]mm 且实体闭合", "ok": true}
+{"ts": 1790565768.508, "actor": "AI", "act": "gate", "detail": "1.1 容量 >= 320ml -> PASS | 内腔锥台 R33.8→R35.56 × 87mm 解析 328.8ml", "gate": "1.1 容量 >= 320ml", "ok": true}
+{"ts": 1790565768.511, "actor": "AI", "act": "gate", "detail": "1.2 壁厚采样 ⊆ [4,7]mm -> PASS | 5 样本 [4.37, 4.38, 4.43, 4.43, 4.44]mm", "gate": "1.2 壁厚采样 ⊆ [4,7]mm", "ok": true}
+{"ts": 1790565768.513, "actor": "AI", "act": "gate", "detail": "2.1 指孔净空 >= 28mm -> PASS | 穿透 3 命中：把手外 85.0 / 把手内 71.0 / 杯壁 39.0 → 指孔 32.0mm", "gate": "2.1 指孔净空 >= 28mm", "ok": true}
+{"ts": 1790565768.515, "actor": "AI", "act": "gate", "detail": "2.4 含把总宽 ∈ [125,150]mm -> PASS | bbox 总宽 125.0mm，外凸 46.0mm（= 指孔 31 + 管径 14）", "gate": "2.4 含把总宽 ∈ [125,150]mm", "ok": true}
+{"ts": 1790565768.517, "actor": "AI", "act": "gate", "detail": "2.2 管径 ∈ [12,16]mm -> PASS | 弧顶横穿 14.0mm（bevel_depth 7mm×2）", "gate": "2.2 管径 ∈ [12,16]mm", "ok": true}
+{"ts": 1790565768.519, "actor": "AI", "act": "gate", "detail": "2.3 把手跨度 ∈ [28,72]% -> PASS | 端点 z 30%→70% 杯高", "gate": "2.3 把手跨度 ∈ [28,72]%", "ok": true}
+{"ts": 1790565768.521, "actor": "AI", "act": "gate", "detail": "3.1 高:径 ∈ [1.09,1.29] -> PASS | 95.0/80.0 = 1.188", "gate": "3.1 高:径 ∈ [1.09,1.29]", "ok": true}
+{"ts": 1790565768.523, "actor": "AI", "act": "gate", "detail": "3.2 口沿倒角在册 -> PASS | RimBevel width 2.0mm × 3 段 @25°（apply 前快照，几何已生效——口沿倒角边可在 mesh 中验证）", "gate": "3.2 口沿倒角在册", "ok": true}
+{"ts": 1790565768.525, "actor": "AI", "act": "gate", "detail": "3.3 质心 xy ⊂ 底面圆(R38) -> PASS | 质心偏移 6.26mm << 38mm（把手侧偏，重心稳）", "gate": "3.3 质心 xy ⊂ 底面圆(R38)", "ok": true}
+{"ts": 1790565768.527, "actor": "AI", "act": "gate", "detail": "4.1 材质参数在册 -> PASS | rough 0.32 + coat 0.8（节点实读回）", "gate": "4.1 材质参数在册", "ok": true}
+{"ts": 1790565768.535, "actor": "AI", "act": "rig:4.2", "detail": "三点光按 10cm 级重配：Key110W@0.5m/Fill25W/Rim180W + 50mm f/2.8 DOF 对焦杯身；地板 0.13→0.045（目验归因：大面光下 0.13 地板反射爆白喧宾夺主）", "gate": "G4", "ok": true}
+{"ts": 1790565772.702, "actor": "AI", "act": "gate", "detail": "G4 呈现谓词（非空+方差+不过曝） -> PASS | BLENDER_EEVEE 1024² 912.2KB luma 0.6328/0.3421 过曝像素 2.7% 4093.2ms → mug.png", "gate": "G4 呈现谓词（非空+方差+不过曝）", "ok": true}
+{"ts": 1790565772.713, "actor": "AI", "act": "session:end", "detail": "G3 13/13 全绿，G1 剪影+G4 呈现落盘，耗时 7.9s", "gate": "", "ok": true}
+{"ts": 1790565973.65, "actor": "AI", "act": "rollback:session", "detail": "回退演示开始——剧本 A 杯身 → B 把手 → C 误操作 → WAL 重放回退 → 指纹对账", "gate": "", "ok": true}
+{"ts": 1790565995.916, "actor": "AI", "act": "rollback:A", "detail": "杯身建好 checkpoint｜指纹 {'verts': 768, 'faces': 1532, 'volume_ml': 125.234}", "gate": "ROLLBACK", "ok": true}
+{"ts": 1790565998.886, "actor": "AI", "act": "rollback:B", "detail": "把手融合 checkpoint｜指纹 {'verts': 2153, 'faces': 4306, 'volume_ml': 139.508}", "gate": "ROLLBACK", "ok": true}
+{"ts": 1790566000.384, "actor": "AI", "act": "rollback:C", "detail": "误操作落地（演示用）｜指纹 {'verts': 2235, 'faces': 4470, 'volume_ml': 115.805}｜verts 变化 2153→2235", "gate": "ROLLBACK", "ok": false}
+{"ts": 1790566000.39, "actor": "AI", "act": "rollback:replay", "detail": "WAL replay 5 事件，重执行 2 个 build.*，跳过 ['modify.oops']", "gate": "", "ok": true}
+{"ts": 1790566002.25, "actor": "AI", "act": "rollback:D", "detail": "重放回退完成｜指纹 D==B True（{'verts': 2153, 'faces': 4306, 'volume_ml': 139.508}）｜逐顶点 sha D==B True", "gate": "ROLLBACK", "ok": true}
+{"ts": 1790566002.258, "actor": "AI", "act": "rollback:verify", "detail": "WAL 哈希链 verify = True（7 事件链）", "gate": "ROLLBACK", "ok": true}

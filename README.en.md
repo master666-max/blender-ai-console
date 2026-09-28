@@ -35,7 +35,7 @@ This project's countermeasure in one sentence:
 |---|---|
 | ![Mug with ring handle](showcase/mug.png) | ![Render diff triplet](showcase/render-diff.png) |
 
-Left: a mug declared and compiled in dialogue — 128-segment smooth body, a real recessed cavity, boolean-fused handle — rendered by the project's own presentation rig (M7-3 three-point lighting + 50mm f/2.8 shallow DOF, EEVEE in 2.4s). Right: deterministic same-camera render diff — hard-edged cube → heavily beveled variant, changed pixels highlighted in red; re-rendering the same scene yields **0-pixel drift**, so the diff gate has zero false positives.
+Left: a mug declared and compiled in dialogue — 192-segment tapered body, a real recessed rim, an elliptical-arc tube handle — **compiled node-by-node from a logic tree and shipped only after passing gates G1–G4** (three-point lighting + 50mm f/2.8 shallow DOF, EEVEE ~4s). Right: deterministic same-camera render diff — hard-edged cube → heavily beveled variant, changed pixels highlighted in red; re-rendering the same scene yields **0-pixel drift**, so the diff gate has zero false positives.
 
 ## What makes it different
 
@@ -54,6 +54,37 @@ Left: a mug declared and compiled in dialogue — 128-segment smooth body, a rea
 3. **Compile** — deterministic compilers land it in a real Blender 5.2 scene (GN trees / procedural materials / Rigify rigs / cameras).
 4. **Verify** — predicate family + same-camera render diff + perceptual hash; failures return structured errors → localize → self-repair, never a vague "try again".
 5. **Commit** — WAL + hash chain; the paragraph becomes a rollback anchor; renders are archived under `results/` for the next regression.
+
+## The logic tree: how the AI side works — and admits mistakes
+
+A one-line request doesn't turn into operations directly — it is first decomposed into a **logic tree** (`blender_console/logic_trees/mug.json`). Each leaf node is a triple: **build recipe (compiled by the AI side) + machine gate (mechanically enforced) + visual note (human inspection)**, across four layers. Take "make a classic 350ml ceramic mug" (anchored to real retail specs):
+
+| Layer | Node | Build (AI compiles this) | Machine gate (never downgraded) |
+|---|---|---|---|
+| L1 Container | 1.1 Cavity | EXACT boolean cavity cut, cutter breaks through the rim | Capacity ≥ 320 ml |
+| L1 Container | 1.2 Wall | Outer taper R38→R40, inner cavity follows the taper | Ray samples ⊆ [4,7] mm |
+| L2 Ergonomics | 2.1 Finger gap | Elliptical-arc tube handle, ends embedded 4 mm | Finger gap ≥ 28 mm (measured 32) |
+| L3 Form | 3.1 Proportion | H 95 / Ø 80, 192 segments | H:Ø ∈ [1.09,1.29] (measured 1.188) |
+| L4 Look | 4.2 Lighting | Three-point rig + Filmic dark studio | Non-empty + variance + blown < 5% |
+
+**One tree, walked by both sides**: when generating a model, the AI decomposes the plan along the tree and compiles each leaf's build field; the gates enforce each machine criterion. Build recipes may deviate **declaratively** (real case: a cylindrical cavity conflicts with the capacity/wall dual gates → switched to a tapered cavity, deviation logged); gate numbers are never downgraded. All 12 nodes walked = G3 machine checks 13/13 green, every number archived in `results/mug_showcase_result.json`. This tree is not just a checklist for humans — **it is the AI side's walking map**.
+
+### Every action is booked
+
+Every AI action (modeling, gate decision, render, rollback) is appended to **a single append-only ledger** (`showcase/mug-ledger.jsonl`, human-auditable):
+
+```json
+{"ts": 1759056191.2, "actor": "AI", "act": "gate", "gate": "2.1 finger gap >= 28mm",
+ "detail": "2.1 finger gap >= 28mm -> PASS | 3 ray hits: handle outer 85.0 / handle inner 71.0 / wall 39.0 → gap 32.0mm", "ok": true}
+```
+
+### Watch it roll back
+
+The AI makes mistakes too — what matters is what happens next. A real-machine demo (`mug_rollback_live.py`): **A body → B add handle → C a mistaken gouge cuts the wall open → replay WAL events (skipping the destructive one) → D rollback**:
+
+![Rollback demo: A body / B handle / C mistake / D rollback == B](showcase/rollback-strip.png)
+
+Rollback is not "undoing inspiration" — it is a mechanism: every action first lands in the WAL (hash-chained, tamper-evident); rollback = **deterministic replay of whitelisted events**. Triple reconciliation — mesh fingerprint D==B (2153 verts / 139.5 ml), per-vertex sha16 D==B (`f82f6eb980069cb3`), WAL hash chain `verify() = True`. The wrecked mug in frame C and the volume drop in the data (139.5 → 115.8 ml) stay on record — no pretending mistakes never happened.
 
 ## Under the hood
 
@@ -161,7 +192,7 @@ All of these really happened and are now encoded in the acceptance suites (save 
 
 | Path | Content |
 |---|---|
-| [`blender_console/`](blender_console/) | Console core + 34 `_live.py` machine acceptance suites |
+| [`blender_console/`](blender_console/) | Console core + 34 `_live.py` machine acceptance suites + `logic_trees/` (AI-side plan templates) |
 | [`m8_bridge/gn_deploy/`](m8_bridge/gn_deploy/) | Deployment payload (55 py, diff-checked against mainline) |
 | [`m9_web/`](m9_web/) | Static web console + flicker diff viewer |
 | [`release/`](release/) | Release manifest (147-file five-layer inventory) |
@@ -186,6 +217,8 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 | `exp7_live` 3/3 | Process-gate three-way comparison (left-shift effect) |
 | `m6_live` 31/31 | AB → preference learning / override write-back / diversity gate |
 | `m64_lpips_live` 1+4 | Visual-diversity calibration: 28 pairs geometric V + 8-view LPIPS two-ruler reconciliation |
+| `mug_showcase_live` 13/13 | Logic-tree-driven gates: G1 silhouette (human) + G3 machine checks (capacity / wall rays / finger gap / centroid…) + G4 predicates |
+| `mug_rollback_live` | Rollback demo: WAL replay skips the destructive event; fingerprint / per-vertex sha / hash chain all reconcile D==B |
 | Remaining 20+ suites | M1-M5 / M7 / M9 / M10 regression & smoke |
 
 </details>
@@ -195,6 +228,7 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 - [x] M1–M10 mainline + release inversion (whl 2.1.0-gn pinned)
 - [x] R7 deep water: character pipeline (incl. console integration) / EMD calibration / BIM predicates / material assets / vertex-fingerprint verdict / multi-rig coexistence / DFM four predicates / depsgraph experiment family / pHash+SSIM calibration
 - [x] R7h: M6-4 visual-diversity LPIPS calibration (8 views, two-ruler reconciliation closed)
+- [x] Facade logic tree: one line → tree decomposition → per-leaf gates (the AI side's walking map) + action ledger + real-machine WAL rollback demo
 - [ ] M9-5 flicker vs side-by-side preference A/B (flicker.html ready; needs human experiment)
 - [ ] Long-term: annotation back-reference · audio channel · HAMT (adjudication on hold ◐) · ARKit-52 expression shape assets
 
