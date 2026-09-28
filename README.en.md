@@ -242,6 +242,6 @@ M1–M10 mainline green; R7 deep-water AI-actionable items closed. Regression ba
 
 <div align="center">
 
-[MIT](LICENSE) © 2026 · *Treat every pixel with engineering discipline.*
+[MIT](LICENSE) © 2026 · 
 
 </div>
