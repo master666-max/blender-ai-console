@@ -160,6 +160,7 @@ graph LR
     PS --> OC
     DIR --> CONSOLE
     INTAKE --> LT
+    LT -->|"W-2 合并后：白名单真源断言"| PS
     US --> EXP
 ```
 
@@ -179,7 +180,7 @@ graph LR
 | experience | console, upstream_store | |
 | render_diff | console | |
 | intake | _probe_intake_schema, m9_intake_live（实验脚本） | 核心模块暂无人 import 它——AI 会话层是它的运行时调用方 |
-| logic_tree | intake（实测：intake import logic_tree） | **logic_tree 不 import plan_schema**——to_plan 产出纯 dict，校验在 console.compile 内 |
+| logic_tree | intake（实测：intake import logic_tree）＋ plan_schema（**W-2 合并后新增**：白名单真源断言） | ~~logic_tree 不依赖 plan_schema~~ 已过时——W-2 合并后有受控依赖（值域断言） |
 | director | exp7_live（实验脚本） | 运行时由 AI 会话层驱动 |
 
 ### v1 → v2 修正记录（验收裁决）
@@ -416,6 +417,10 @@ graph TB
 渲染回归：`python docs/architecture/verify_mermaid.py` → 无头 Chrome 实渲染，
 逐块 PASS/FAIL（mermaid 语法炸点在 PR 前拦住）。
 
+**链路回归门禁（2026-09-29 起）**：改 `op_compiler.py` / `console.py` /
+`logic_tree.py` 结构后必须跑 `blender --background --python e2e_live.py`
+（九步全链 11/11）——图③⑥画的是链路行为，锚点就是这条脚本。
+
 ---
 
 ## ⑨ 黑话词典（图内编号的唯一出处——新黑话先入词典再上图）
@@ -461,7 +466,7 @@ graph TB
 | 挂单 | 内容 | 判据（何时销单） |
 |---|---|---|
 | ~~W-1~~ | ~~nlg_bands 零调用方~~ | **已销单（2026-09-29）**：console.render_diff 接线 verdict_report（AST 实证 console import nlg_bands），E2E 九步链（e2e_live.py 11/11）判词驱动 patch 两轮收敛实证；图②⑥已补实边 |
-| W-2 | **两份 op 白名单**：plan_schema.SEGMENT_OPS（校验用）与 logic_tree.OP_TO_SEG（树→plan 映射用）各一份，漂移风险 | 合并为单一真源（logic_tree 从 plan_schema import）时销单 |
+| W-2 | ~~两份 op 白名单~~ | **已销单（2026-09-29）**：logic_tree.py import plan_schema.SEGMENT_OPS 并模块加载即断言 OP_TO_SEG 值域 ⊆ 白名单（漂移在 import 时响亮失败）。连锁更新：图② `LT --> PS` 从 v1 假边变成受控真边——"图随代码"的完整闭环案例 |
 | ~~W-3~~ | ~~Web 控制台 API 层缺失~~ | **已销单（2026-09-29）**：embedded_server.py 落地——HTTP daemon 线程 + 队列 + 主线程泵（GUI=bpy.app.timers / 后台脚本=manual pump 双模式）；api_revert_live.py 真机 14/14（state/checkpoint/revert/pop/drop_segment/verify/override/UNKNOWN_OP/静态伺服/无死锁）。销单动作：部署图 ⑦ 同步更新 |
 | W-4 | **escape 零调用方**：M4-4 逃逸舱是治理关键件但核心链路无人 import（设计上由 AI 会话层显式走） | AI 会话层接线 escape 通道时销单，图①②补实边 |
 | W-5 | **intake 核心模块无内部调用方**：只被实验脚本 import，运行时调用方是 AI 会话层（进程外） | 会话层代码入库时销单 |

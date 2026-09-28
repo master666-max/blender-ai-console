@@ -26,6 +26,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from plan_schema import SEGMENT_OPS          # W-2 销单（2026-09-29）：白名单单一真源
+
 __all__ = ["LogicTreeError", "load_tree", "mm_at_scale", "topo_order",
            "validate_logic_tree", "LogicTreeRunner", "STATUSES"]
 
@@ -241,6 +243,14 @@ OP_TO_SEG = {
     "weathering":    "set_material",
     "display_base":  "cube",
 }
+
+# W-2 销单（2026-09-29）：OP_TO_SEG 值域必须 ⊆ plan_schema.SEGMENT_OPS——
+# 模块加载即校验，白名单漂移在 import 时响亮失败（而不是在 compile 时才炸）。
+for _op in OP_TO_SEG.values():
+    if _op not in SEGMENT_OPS:
+        raise ValueError(
+            f"OP_TO_SEG 值 {_op!r} 不在 plan_schema.SEGMENT_OPS——"
+            "白名单漂移（挂单 W-2 判据）")
 GATE_ONLY_OPS = {"proportion_check", "flat_armor_check"}   # 验证门 → constraints
 
 

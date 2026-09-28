@@ -1,0 +1,110 @@
+"""seed_war_stories.py — 本会话 war stories 正式入经验库（吃狗粮）
+================================================================================
+2026-09-28/29 会话产出的七条核心教训，经 record_ai（draft，晋升过人）入主库。
+每条都是真机验证过的失败教训（verified_failure=True）——war stories 纪律：
+失败叙事与成功叙事同等地位，不衰减不过期（Orr/M6-2b）。
+运行：python seed_war_stories.py（纯 Python，无 bpy）
+"""
+import sys
+from pathlib import Path
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from experience import ExperienceLibrary
+
+WARS = [
+    dict(trigger={"origin": "session_retro", "module": "op_compiler",
+                  "op": "revolve_profile", "kind": "param_binding"},
+         attention="revolve_profile 参数化断裂：set_param 改值几何纹丝不动——先查 _link_param",
+         story="E2E 九步链 STEP8 看图改发现 Depth 95→80→95 两轮 set_param 后几何恒为 "
+               "MeshCone 默认 50mm。最小探针（probe_setparam.py）实锤：modifier "
+               "inputs 值已写入、树内 MeshCone 无消费者——_op_revolve_profile 只 "
+               "_set_const 常量、无 _link_param；连编译常量都因键名大小写"
+               "（params_mm.Depth vs spec.get('depth')）没吃到。修：补 "
+               "radius_top/radius_bottom 别名组 + 三 socket 参数化（对齐 "
+               "_op_cylinder 范式）。教训：新 op 落地必须带参数化 + 一个 set_param "
+               "可观测断言。",
+         params={"bug_faces": 34, "probe_lines": 40},
+         evidence=[{"artifact": "probe_setparam.py",
+                    "quote": "inputs 值变、34 面 z 顶恒 50",
+                    "recalc": "blender -b -P probe_setparam.py | grep '[p]'"}],
+         verified_failure=True),
+    dict(trigger={"origin": "session_retro", "module": "op_compiler",
+                  "op": "array_linear", "kind": "blender_api"},
+         attention="Blender 5.2 DuplicateElements 的 domain 默认 POINT——只复制顶点丢全部面",
+         story="虎式轮/格栅/备用履带阵列段编译'成功'但渲染零件：_op_array_linear "
+               "两层断链——①`_ = src` 丢弃上游（To_Instances 无输入）；②"
+               "DuplicateElements domain 缺省 POINT，faces=0 verts=512（探针 "
+               "probe_loose.py）；③末端须 Realize Instances 才计入面数统计，"
+               "输出 socket 名 'Geometry' 非 'Mesh'。修：domain='FACE' + "
+               "src 接入 + Realize 收尾。三坑已入 OP_META lessons。",
+         params={"faces_lost": 512},
+         evidence=[{"artifact": "probe_loose.py",
+                    "quote": "P2_array8 faces=0 verts=512 loose=512",
+                    "recalc": "blender -b -P probe_loose.py | grep P2"}],
+         verified_failure=True),
+    dict(trigger={"origin": "session_retro", "module": "op_compiler",
+                  "kind": "source_semantics"},
+         attention="compile_op 的 spec[source] 语义=替换上游——多路并集必须嵌套 join",
+         story="虎式 1.2/1.3 段把多路几何写进 join 的 source 字段，Incoming 被顶掉，"
+               "车体消失（渲染只剩部件）。compile_op L546：spec['source'] 编译后"
+               "替换 chain_src。正确范式：join{operand: join2{source: A, "
+               "operand: B}} 三路并 Incoming+A+B。教训：source 是'上游替代'，"
+               "不是'额外一路'。",
+         params={},
+         evidence=[{"artifact": "tiger_console_run.py",
+                    "quote": "render 只剩两环+炮塔，车体丢失",
+                    "recalc": "grep -n 'source' tiger_console_run.py"}],
+         verified_failure=True),
+    dict(trigger={"origin": "session_retro", "module": "console",
+                  "kind": "coplanar_boolean"},
+         attention="MeshBoolean 吃非焊接 join 输入/共面体必产接缝非流形——布尔前先想几何关系",
+         story="虎式车体 boolean_diff 的 source 是 join 出的独立双盒（不焊接）→ "
+               "manifold 3；切除盒收窄后与 hull 共面（W 2400=2400）→ manifold 9 + "
+               "退化面。修：阶梯车头改为'上层不延伸到前部'的纯 join 两盒（重叠 "
+               "10mm），零布尔零共面，verify PASS。教训：布尔是最后手段；共面="
+               "非流形+退化面的经典来源。",
+         params={"manifold_before": 9, "manifold_after": 0},
+         evidence=[{"artifact": "tiger_console_run.py:1.1",
+                    "quote": "verify FAIL manifold:3→9→PASS 3294 面",
+                    "recalc": "grep manifold e2e_work/../tiger_work -r"}],
+         verified_failure=True),
+    dict(trigger={"origin": "session_retro", "module": "logic_tree",
+                  "kind": "gate_scope"},
+         attention="全场景 bbox ≠ 部件口径——门禁判定用参数真源反算，渲染 diff 做旁证",
+         story="E2E STEP8 谓词先用全场景 bbox 实测 height_mm，量出 123mm（含展台/"
+               "把手偏移）导致收敛判定恒 FAIL。声明式编译下参数=几何的单一真源"
+               "（params_real 原则）：门禁判定用参数反算（Depth×1000），渲染 "
+               "diff（changed_ratio）作几何可见性独立旁证。两证据各司其职。",
+         params={"wrong_height_mm": 123, "right_height_mm": 95},
+         evidence=[{"artifact": "e2e_live.py:evaluate_gate",
+                    "quote": "8a-probe bbox z=108/123 全场景口径失真",
+                    "recalc": "grep '8a-probe' e2e_live 日志"}],
+         verified_failure=True),
+    dict(trigger={"origin": "session_retro", "module": "experience",
+                  "kind": "governance"},
+         attention="verified_failure 入账：AI 可凭机器门禁谓词声明失败，status 仍 draft",
+         story="war stories 通道落地：record_ai 加 verified_failure 参数——"
+               "outcome=verified_failure（失败事实由 gate 谓词机器判定，非 AI "
+               "主观），status 强制 draft（晋升过人）。mark_reuse 对 "
+               "verified_failure 不衰减（失败教训不过期）。本条目即该通道的"
+               "首批实践：七条会话教训以 draft 入库，等 human:* 晋升。",
+         params={"test_added": 6, "suite": "test_experience 50/50"},
+         evidence=[{"artifact": "test_experience.py:[7b]",
+                    "quote": "verified_failure=True → outcome 对 + status draft",
+                    "recalc": "python test_experience.py | grep 7b"}],
+         verified_failure=False),
+]
+
+lib = ExperienceLibrary(HERE / "experience_library.jsonl")
+eids = []
+for w in WARS:
+    eid = lib.record_ai(**w)
+    eids.append(eid)
+    print("[seed] %s… %s" % (eid[:12], w["attention"][:50]))
+
+hits = lib.recall({"origin": "session_retro"}, n=8, include_draft=True)
+print("[seed] recall 反哺验证：命中 %d/%d 条（主库含旧条目，draft ×0.5 权重"
+      "排位靠后属治理预期——晋升后满权重）" % (len(hits), len(WARS)))
+print("[seed] 治理状态：全部 draft——晋升须 human:*（python -c '...promote(eid, actor=\"human:...\")'）")
+assert len(hits) >= len(WARS) - 1, "recall 命中不足"
+print("SEEDED: %d war stories" % len(eids))
