@@ -50,3 +50,4 @@ results/
 # 会话工作产物（探针/实验运行时目录）
 blender_console/*_work/
 docs/architecture/verify_mermaid.html
+blender_console/konbini_frames/fr_*.png

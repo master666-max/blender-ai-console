@@ -10,7 +10,7 @@ v2 三原则：
   3. 色彩克制：夜蓝基调 + 三个光焦点（店内暖橙/招牌品红/街灯钠黄）
 运行：blender --background --python konbini_build.py [--python-expr 渲染]
 """
-import bpy, math, random
+import bpy, math, random, sys
 from pathlib import Path
 
 random.seed(7)
@@ -286,7 +286,8 @@ print("[konbini] v2 objects:", len(out_objs))
 
 
 # ── turntable 视频输出（EEVEE 全渲染能力：GI/辉光/柔影）──────
-if "--turntable" in sys.argv:
+import os as _os
+if _os.environ.get("KONBINI_TURNTABLE"):
     sc = bpy.context.scene
     sc.render.engine = 'BLENDER_EEVEE'
     sc.eevee.taa_render_samples = 48
@@ -295,24 +296,27 @@ if "--turntable" in sys.argv:
     sc.render.fps = 24
     sc.frame_start = 1
     sc.frame_end = 144                     # 6 秒 @24fps
-    sc.render.image_settings.file_format = 'FFMPEG'
-    sc.render.ffmpeg.format = 'MPEG4'
-    sc.render.ffmpeg.codec = 'H264'
-    sc.render.ffmpeg.constant_rate_factor = 'HIGH'
-    sc.render.filepath = str(Path(__file__).parent / "konbini_turntable.mp4")
-    # compositor 辉光（动画夜景的灵魂）
-    sc.use_nodes = True
-    nt = sc.node_tree
-    nt.nodes.clear()
-    rl = nt.nodes.new("CompositorNodeRLayers")
-    gl = nt.nodes.new("CompositorNodeGlare")
-    gl.glare_type = 'BLOOM'
-    gl.threshold = 0.9
-    gl.size = 8
-    gl.mix = -0.6
-    comp = nt.nodes.new("CompositorNodeComposite")
-    nt.links.new(rl.outputs["Image"], gl.inputs["Image"])
-    nt.links.new(gl.outputs["Image"], comp.inputs["Image"])
+    sc.render.image_settings.file_format = 'PNG'
+    fr = Path(__file__).parent / "konbini_frames"
+    fr.mkdir(exist_ok=True)
+    sc.render.filepath = str(fr / "fr_")
+    # compositor 辉光（5.2 API 兼容尝试——失败不阻塞帧渲染）
+    try:
+        sc.use_nodes = True
+        nt = sc.node_tree
+        nt.nodes.clear()
+        rl = nt.nodes.new("CompositorNodeRLayers")
+        gl = nt.nodes.new("CompositorNodeGlare")
+        gl.glare_type = 'BLOOM'
+        gl.threshold = 0.9
+        gl.size = 8
+        gl.mix = -0.6
+        comp = nt.nodes.new("CompositorNodeComposite")
+        nt.links.new(rl.outputs["Image"], gl.inputs["Image"])
+        nt.links.new(gl.outputs["Image"], comp.inputs["Image"])
+        print("[konbini] compositor bloom OK")
+    except Exception as _ce:
+        print("[konbini] compositor skip:", repr(_ce)[:120])
     # 相机绕 target 环绕（摇摆 210°）
     tgt_loc = (-0.05, 0.10, 0.55)
     import math as _m
