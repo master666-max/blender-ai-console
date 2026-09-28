@@ -258,6 +258,36 @@ try:
     check("新条目带 supersedes 指向旧条目",
           lambda: lib3.entries[sup_eid].supersedes, ai_eid)
 
+    # ── [7b] verified_failure 入账（war stories 通道）────────────
+    print("\n[7b] verified_failure：AI 声明机器验证过的失败")
+    lib4 = ExperienceLibrary(tmp / "lib4.jsonl")
+    ev_gate = [{"artifact": "gate3.1", "quote": "height=87.86mm 期望 82-86",
+                "recalc": "blender -b -P x.py | grep 'gate 3.1'"}]
+    wf_eid = lib4.record_ai(trigger={"node": "3.1", "build_op": "proportion_check"},
+                            attention="比例门超差：挡泥板抬高 bbox",
+                            story="gate 3.1 FAIL：87.86mm > 86mm 上限",
+                            params={"height_mm": 87.86},
+                            evidence=ev_gate, verified_failure=True)
+    check("verified_failure=True → outcome=verified_failure",
+          lambda: lib4.entries[wf_eid].outcome, "verified_failure")
+    check("但 status 仍强制 draft（AI 无权自宣验收，晋升过人）",
+          lambda: lib4.entries[wf_eid].status, "draft")
+    ok_eid = lib4.record_ai(trigger={"node": "3.1"}, attention="a", story="s")
+    check("不传 verified_failure → 默认 unverified（兼容不变）",
+          lambda: lib4.entries[ok_eid].outcome, "unverified")
+    check("verified_failure 条目 include_draft 召回可见",
+          lambda: any(e.eid == wf_eid for e in
+                      lib4.recall({"node": "3.1"}, include_draft=True)), True)
+    # 失败教训不过期：mark_reuse 无变体复用 → verified_failure 不衰减
+    before_w = lib4.entries[wf_eid].weight
+    lib4.mark_reuse(wf_eid, success=False, had_variant=False)
+    check("mark_reuse：verified_failure 不衰减（war stories 不过期）",
+          lambda: lib4.entries[wf_eid].weight, before_w)
+    before_u = lib4.entries[ok_eid].weight
+    lib4.mark_reuse(ok_eid, success=False, had_variant=False)
+    check("mark_reuse：unverified 衰减 ×0.8（对照组）",
+          lambda: lib4.entries[ok_eid].weight, round(before_u * 0.8, 4))
+
     # ── 汇总 ────────────────────────────────────────────────────
     failed = [r for r in ROWS if not r["ok"]]
     print(f"\nM6 EXPERIENCE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")

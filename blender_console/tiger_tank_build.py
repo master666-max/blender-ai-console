@@ -271,14 +271,23 @@ height_mm = (hi_z - lo_z) * 1000
 print("[gate 3.1] height=%.2fmm (期望 82-86) lo=%s hi=%s" % (height_mm, lo_n, hi_n))
 print("[gate 3.1] hull_length=%.2fmm (期望 180.5)" % (HULL_L * 1000))
 
+_gate_ok = 82.0 <= height_mm <= 86.0
+print("[gate 3.1] verdict=%s (82-86mm)" % ("PASS" if _gate_ok else "FAIL"))
+
 lib.record_ai(
     trigger={"origin": "logic_tree", "project": "tiger_tank",
              "node": "3.1", "build_op": "proportion_check",
-             "gate": {"height_mm": round(height_mm, 2)}},
+             "gate": {"height_mm": round(height_mm, 2),
+                      "expect_mm": [82.0, 86.0],
+                      "verdict": "pass" if _gate_ok else "fail"}},
     attention="虎式比例门：bbox 口径统计（非对象原点）",
-    story="v3 建模：阶梯车头/炮塔塑造/履带板阵列/排气护罩。gate 3.1 height=%.2fmm" % height_mm,
+    story="v3.4 建模：阶梯车头/炮塔塑造/履带板阵列/排气护罩。gate 3.1 height=%.2fmm → %s"
+          % (height_mm, "PASS" if _gate_ok else "FAIL"),
     params={"height_mm": round(height_mm, 2)},
-    evidence=["gate3.1", "bbox"])
+    verified_failure=not _gate_ok,
+    evidence=[{"artifact": "tiger_tank_build.py:gate3.1",
+               "quote": "height=%.2fmm 期望 82-86" % height_mm,
+               "recalc": "blender -b -P tiger_tank_build.py | grep 'gate 3.1'"}])
 
 mark("5.1")
 bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, -0.0005))

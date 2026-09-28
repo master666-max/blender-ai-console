@@ -342,11 +342,21 @@ def _op_set_material(ad, tree, sid, spec, src):
 
 
 def _op_array_linear(ad, tree, sid, spec, src):
-    """线性阵列：GeometryToInstance → Duplicate(Amount) → Index×offset → Translate Instances。
-    GN 实测 5.2：DuplicateElements IN=[Geometry,Selection,Amount] OUT=[Geometry,Duplicate Index]。"""
-    _ = src
+    """线性阵列：src(被阵列几何) → To_Instances → Duplicate(Amount) → Index×offset → Translate。
+    GN 实测 5.2：DuplicateElements IN=[Geometry,Selection,Amount] OUT=[Geometry,Duplicate Index]。
+    source 修复（2026-09-28 真机）：此前 `_ = src` 丢弃上游 → To_Instances 无输入 →
+    阵列段输出空几何（虎式轮/格栅/备用履带全部消失的真因）。"""
+    if src is None:
+        raise OpCompileError(
+            "array_linear 需要 source（被阵列的几何）——嵌套 source 链或 consumes_input=true",
+            code="MISSING_SOURCE",
+            suggestions=[{"action": "add_field", "target": "source",
+                          "value": '{"op": "transform", "source": {"op": "cylinder", ...}}'}])
     gi2 = ad.add_node(tree, "GeometryNodeGeometryToInstance", "To_Instances")
+    ad.link(tree, *src, gi2, "Geometry")
     dup = ad.add_node(tree, "GeometryNodeDuplicateElements", "Duplicate")
+    dup.domain = 'FACE'                      # 5.2 默认 POINT（只复制顶点丢面）——真机探针实锤
+    tree.links.new(gi2.outputs[0], dup.inputs["Geometry"])
     _set_const(dup, "Amount", spec.get("count", 2))
     idx = ad.add_node(tree, "ShaderNodeMath", "Index_Scale")
     idx.operation = 'MULTIPLY'
@@ -357,14 +367,23 @@ def _op_array_linear(ad, tree, sid, spec, src):
     trans = ad.add_node(tree, "GeometryNodeTranslateInstances", "Translate")
     tree.links.new(dup.outputs["Geometry"], trans.inputs["Instances"])
     tree.links.new(comb.outputs[0], trans.inputs["Translation"])
-    return trans, "Instances"
+    real = ad.add_node(tree, "GeometryNodeRealizeInstances", "Realize")
+    tree.links.new(trans.outputs[0], real.inputs["Geometry"])
+    return real, "Geometry"
 
 
 def _op_array_radial(ad, tree, sid, spec, src):
-    """径向阵列：Duplicate(Amount) → Index×angle → Rotate Instances（绕 z，Pivot=原点）。"""
-    _ = src
+    """径向阵列：src(被阵列几何) → To_Instances → Duplicate(Amount) → Index×angle → Rotate（绕 z，Pivot=原点）。"""
+    if src is None:
+        raise OpCompileError(
+            "array_radial 需要 source（被阵列的几何）——嵌套 source 链或 consumes_input=true",
+            code="MISSING_SOURCE",
+            suggestions=[{"action": "add_field", "target": "source",
+                          "value": '{"op": "cylinder", ...}'}])
     gi2 = ad.add_node(tree, "GeometryNodeGeometryToInstance", "To_Instances")
+    ad.link(tree, *src, gi2, "Geometry")
     dup = ad.add_node(tree, "GeometryNodeDuplicateElements", "Duplicate")
+    dup.domain = 'FACE'                      # 5.2 默认 POINT（只复制顶点丢面）
     _set_const(dup, "Amount", spec.get("count", 6))
     tree.links.new(gi2.outputs[0], dup.inputs["Geometry"])
     mul = ad.add_node(tree, "ShaderNodeMath", "Angle_Scale")
@@ -376,7 +395,9 @@ def _op_array_radial(ad, tree, sid, spec, src):
     rot = ad.add_node(tree, "GeometryNodeRotateInstances", "Rotate")
     tree.links.new(dup.outputs["Geometry"], rot.inputs["Instances"])
     tree.links.new(comb.outputs[0], rot.inputs["Rotation"])
-    return rot, "Instances"
+    real = ad.add_node(tree, "GeometryNodeRealizeInstances", "Realize")
+    tree.links.new(rot.outputs[0], real.inputs["Geometry"])
+    return real, "Geometry"
 
 
 def _op_revolve_profile(ad, tree, sid, spec, src):
@@ -436,8 +457,16 @@ OP_META = {
                      "lessons": ["EXP-006：材质编译进节点树（GeometryNodeSetMaterial 引用 mat_compiler 产物），禁走 bpy 材质槽——重编译随段落重建引用，免疫静默丢失",
                                  "Material 是 datablock socket（default_value 直赋材质对象）",
                                  "物理约束编译期校验：Metallic/Roughness ∈[0,1]、IOR ∈[1.0,2.0]（mat_compiler 响亮失败）"]},
-    "array_linear": {"verified": "tiger_console_run.py", "lessons": []},
-    "array_radial": {"verified": "tiger_console_run.py", "lessons": []},
+    "array_linear": {"verified": "tiger_console_run.py",
+                     "lessons": ["5.2 DuplicateElements 的 domain 默认 POINT——只复制顶点丢全部面"
+                                 "（探针实锤 faces=0 verts=512），必须 dup.domain='FACE'",
+                                 "builder 曾 `_ = src` 丢弃上游 → To_Instances 无输入 → 阵列段输出空",
+                                 "末端 Realize Instances 把实例转实几何（verify 面数才计入；"
+                                 "输出 socket 名是 'Geometry' 非 'Mesh'）",
+                                 "段级三路并集走嵌套 join：join{operand: join2{source: A, operand: B}}"
+                                 "——compile_op 的 source 语义=替换上游，直接写 join.source 会顶掉 Incoming"]},
+    "array_radial": {"verified": "tiger_console_run.py",
+                     "lessons": ["同 array_linear：domain='FACE' / Realize 收尾 / source 语义三坑同样适用"]},
     "revolve_profile": {"verified": "tiger_console_run.py",
                         "lessons": ["近似实现：MeshCone（Radius Top/Bottom/Depth）——任意轮廓旋转待 M4-11 后续"]},
     "array_linear": {"count", "offset_x", "offset_y", "offset_z"},

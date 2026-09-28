@@ -370,12 +370,22 @@ class ExperienceLibrary:
     def record_ai(self, trigger: dict[str, Any], attention: str, story: str,
                   params: dict[str, float] | None = None,
                   evidence: list[dict[str, str]] | None = None,
-                  supersedes: str | None = None) -> str:
+                  supersedes: str | None = None,
+                  verified_failure: bool = False) -> str:
         """**免疫通道**：AI 侧追加经验——强制 draft（M6-2b/上游：引擎只写 draft，
         晋升必须过人）。AI 无权自宣验收；带完整出处三件套的也只能到 draft，
-        由 promote(actor="human:*") 升级。"""
+        由 promote(actor="human:*") 升级。
+
+        verified_failure=True（war stories 通道）：AI 可以声明"这是**机器门禁
+        验证过的失败**"——outcome 写 verified_failure，因为失败事实由 gate 谓词
+        （机器凭证）判定，非 AI 主观；但 status 仍强制 draft——"这条教训值得
+        长期入库"仍由人晋升。mark_reuse 对 verified_failure 不衰减（失败教训
+        不过期），include_draft 召回时以 ×0.5 权重出现。
+        """
         e = ExperienceEntry(trigger=trigger, attention=attention, story=story,
-                            params=params or {}, outcome="unverified",
+                            params=params or {},
+                            outcome="verified_failure" if verified_failure
+                                    else "unverified",
                             status="draft", evidence=evidence or [],
                             supersedes=supersedes)
         return self.add(e, author="ai", source="ai-channel")
