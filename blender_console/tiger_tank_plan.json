@@ -1,0 +1,359 @@
+{
+ "version": "0.3",
+ "intent": "1:35 二战德军虎式坦克后期型（1944 Henschel 炮塔）静态展示模型",
+ "sections": [
+  {
+   "id": "1.1",
+   "order": 0,
+   "op": "boolean_diff",
+   "stage": "blockout",
+   "part": "L1",
+   "consumes_input": false,
+   "depends_on": [],
+   "parameters": [
+    {
+     "name": "L",
+     "type": "FLOAT",
+     "value": 180.57
+    },
+    {
+     "name": "W",
+     "type": "FLOAT",
+     "value": 105.86
+    },
+    {
+     "name": "H",
+     "type": "FLOAT",
+     "value": 85.71
+    }
+   ]
+  },
+  {
+   "id": "1.2",
+   "order": 1,
+   "op": "array_radial",
+   "stage": "structure",
+   "part": "L1",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1"
+   ],
+   "parameters": [
+    {
+     "name": "wheel_dia",
+     "type": "FLOAT",
+     "value": 22.86
+    },
+    {
+     "name": "axle_span_mm",
+     "type": "FLOAT",
+     "value": 3.43
+    }
+   ]
+  },
+  {
+   "id": "1.3",
+   "order": 2,
+   "op": "sweep_circle",
+   "stage": "structure",
+   "part": "L1",
+   "consumes_input": true,
+   "depends_on": [
+    "1.2"
+   ],
+   "parameters": [
+    {
+     "name": "width",
+     "type": "FLOAT",
+     "value": 20.71
+    },
+    {
+     "name": "pitch",
+     "type": "FLOAT",
+     "value": 3.71
+    }
+   ]
+  },
+  {
+   "id": "1.4",
+   "order": 3,
+   "op": "array_linear",
+   "stage": "structure",
+   "part": "L1",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1"
+   ],
+   "parameters": [
+    {
+     "name": "span_x",
+     "type": "FLOAT",
+     "value": [
+      0.02,
+      0.03
+     ]
+    },
+    {
+     "name": "z",
+     "type": "FLOAT",
+     "value": "deck"
+    }
+   ]
+  },
+  {
+   "id": "2.1",
+   "order": 4,
+   "op": "revolve_profile",
+   "stage": "structure",
+   "part": "L2",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1"
+   ],
+   "parameters": [
+    {
+     "name": "ring_dia",
+     "type": "FLOAT",
+     "value": 52.86
+    },
+    {
+     "name": "width",
+     "type": "FLOAT",
+     "value": 59.43
+    }
+   ]
+  },
+  {
+   "id": "2.2",
+   "order": 5,
+   "op": "cylinder",
+   "stage": "structure",
+   "part": "L2",
+   "consumes_input": true,
+   "depends_on": [
+    "2.1"
+   ],
+   "parameters": [
+    {
+     "name": "caliber",
+     "type": "FLOAT",
+     "value": 2.51
+    },
+    {
+     "name": "barrel_len",
+     "type": "FLOAT",
+     "value": 140.86
+    },
+    {
+     "name": "exposed_at35",
+     "type": "FLOAT",
+     "value": 4.03
+    }
+   ]
+  },
+  {
+   "id": "2.3",
+   "order": 6,
+   "op": "cylinder",
+   "stage": "structure",
+   "part": "L2",
+   "consumes_input": true,
+   "depends_on": [
+    "2.1"
+   ],
+   "parameters": [
+    {
+     "name": "dia",
+     "type": "FLOAT",
+     "value": 0.17
+    },
+    {
+     "name": "pos_norm",
+     "type": "FLOAT",
+     "value": [
+      0.02,
+      0.01
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2.4",
+   "order": 7,
+   "op": "cylinder",
+   "stage": "structure",
+   "part": "L2",
+   "consumes_input": true,
+   "depends_on": [
+    "2.1"
+   ],
+   "parameters": [
+    {
+     "name": "pos_norm_x",
+     "type": "FLOAT",
+     "value": [
+      0.01,
+      0.02
+     ]
+    },
+    {
+     "name": "z",
+     "type": "FLOAT",
+     "value": "turret_top"
+    }
+   ]
+  },
+  {
+   "id": "2.5",
+   "order": 8,
+   "op": "boolean_union",
+   "stage": "structure",
+   "part": "L2",
+   "consumes_input": true,
+   "depends_on": [
+    "2.1",
+    "2.2"
+   ],
+   "parameters": [
+    {
+     "name": "thick",
+     "type": "FLOAT",
+     "value": 2.91
+    }
+   ]
+  },
+  {
+   "id": "3.3",
+   "order": 9,
+   "op": "array_linear",
+   "stage": "structure",
+   "part": "L3",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1",
+    "1.1"
+   ],
+   "parameters": [
+    {
+     "name": "mount_face",
+     "type": "FLOAT",
+     "value": "front_upper"
+    }
+   ]
+  },
+  {
+   "id": "4.1",
+   "order": 10,
+   "op": "set_material",
+   "stage": "structure",
+   "part": "L4",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1",
+    "2.1"
+   ],
+   "parameters": [
+    {
+     "name": "base",
+     "type": "FLOAT",
+     "value": "Dunkelgelb"
+    },
+    {
+     "name": "patch",
+     "type": "FLOAT",
+     "value": "Olivgrun"
+    },
+    {
+     "name": "coverage_pct",
+     "type": "FLOAT",
+     "value": [
+      0.86,
+      1.29
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4.2",
+   "order": 11,
+   "op": "set_material",
+   "stage": "structure",
+   "part": "L4",
+   "consumes_input": true,
+   "depends_on": [
+    "4.1",
+    "1.3",
+    "1.4"
+   ],
+   "parameters": [
+    {
+     "name": "rust_band_mm",
+     "type": "FLOAT",
+     "value": 0.43
+    }
+   ]
+  },
+  {
+   "id": "5.1",
+   "order": 12,
+   "op": "cube",
+   "stage": "structure",
+   "part": "L5",
+   "consumes_input": true,
+   "depends_on": [
+    "1.3",
+    "1.4",
+    "2.5",
+    "3.3",
+    "4.2"
+   ],
+   "parameters": [
+    {
+     "name": "base",
+     "type": "FLOAT",
+     "value": [
+      6.29,
+      3.43
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1.5",
+   "order": 13,
+   "op": "cylinder",
+   "stage": "structure",
+   "part": "L1",
+   "consumes_input": true,
+   "depends_on": [
+    "1.1"
+   ],
+   "parameters": [
+    {
+     "name": "dia",
+     "type": "FLOAT",
+     "value": 4.29
+    },
+    {
+     "name": "len",
+     "type": "FLOAT",
+     "value": 25.71
+    }
+   ]
+  }
+ ],
+ "constraints": [
+  {
+   "id": "3.1",
+   "check": "长:高 ∈ [2.05,2.15]（铁门禁）",
+   "expr": "ratio_in",
+   "tier": 1
+  },
+  {
+   "id": "3.2",
+   "check": "装甲面法线平行车身轴 ±0.5°",
+   "expr": "face_normal_parallel_axis",
+   "tier": 1
+  }
+ ]
+}

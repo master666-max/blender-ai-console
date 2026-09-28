@@ -45,10 +45,11 @@ print("\n[2] 结构校验")
 issues = validate_logic_tree(tree)
 check("tiger_tank v2.0 零 issue", lambda: issues, [])
 check("15 节点全部有 tier", lambda: all("tier" in n for n in tree["nodes"]), True)
-check("15 节点全部有 status", lambda: all(n.get("status") == "pending" for n in tree["nodes"]), True)
+check("16 节点全部有合法 status（活树：回写后可能 passed）",
+      lambda: all(n.get("status") in ("pending", "building", "passed", "failed", "blocked") for n in tree["nodes"]), True)
 check("15 节点全部有 deps", lambda: all("deps" in n for n in tree["nodes"]), True)
 order = topo_order(tree)
-check("deps 拓扑序 15 节点无环", lambda: len(order), 15)
+check("deps 拓扑序 16 节点无环", lambda: len(order), len(tree["nodes"]))
 n22 = next(n for n in tree["nodes"] if n["id"] == "2.2")
 check("执行拓扑权威=deps（主炮只依赖炮塔，不串链履带）",
       lambda: n22["deps"], ["2.1"])
@@ -101,8 +102,11 @@ def _raises_lt(tree_bad):
 
 # ── [4] 状态机全流程（虎式 15 节点按拓扑序推进）─────────────
 print("\n[4] 状态机全流程")
-runner = LogicTreeRunner(load_tree(TIGER))
-check("初态全 pending", lambda: runner.progress()["pending"], 15)
+_fresh = load_tree(TIGER)
+for _n in _fresh["nodes"]:
+    _n["status"] = "pending"      # 活树回写后 status 可能是 passed——状态机测试用重置副本
+runner = LogicTreeRunner(_fresh)
+check("初态全 pending", lambda: runner.progress()["pending"], len(_fresh["nodes"]))
 steps = 0
 while True:
     ready = runner.next_ready()
@@ -114,7 +118,7 @@ while True:
         steps += 1
     if steps > 100:
         break
-check("全流程 15 节点逐门通过", lambda: runner.progress()["passed"], 15)
+check("全流程节点逐门通过", lambda: runner.progress()["passed"], len(_fresh["nodes"]))
 check("进度归零（无残留 pending）", lambda: runner.progress()["pending"], 0)
 try:
     runner.start("1.1")
@@ -134,4 +138,18 @@ failed = [r for r in ROWS if not r["ok"]]
 print(f"\nLOGIC TREE UNIT: {len(ROWS) - len(failed)}/{len(ROWS)} passed")
 for f in failed:
     print("  FAILED:", f["case"], "->", f.get("detail"))
+# ── [6] 逻辑树→plan 桥（M7：PlanSchema 零 issue + deps 并行）──
+print("\n[6] 逻辑树→plan 桥")
+from logic_tree import to_plan
+from plan_schema import validate_plan
+plan = to_plan(tree)
+issues = validate_plan(plan, segment_names=[s['id'] for s in plan['sections']])
+check("PlanSchema 零 issue", lambda: len(issues), 0)
+dm = {s['id']: s['depends_on'] for s in plan['sections']}
+check("主炮只依赖炮塔（并行非串链）", lambda: dm.get("2.2"), ["2.1"])
+check("负重轮只依赖车体（并行）", lambda: dm.get("1.2"), ["1.1"])
+check("gate 穿透（3.1/3.2 不进 sections）",
+      lambda: all(s['id'] not in ('3.1', '3.2') for s in plan['sections']), True)
+check("constraints 2 条（gate 节点入约束）", lambda: len(plan['constraints']), 2)
+
 sys.exit(1 if failed else 0)

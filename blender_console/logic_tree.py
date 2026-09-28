@@ -198,3 +198,83 @@ class LogicTreeRunner:
         for n in self.tree["nodes"]:
             counts[n["status"]] = counts.get(n["status"], 0) + 1
         return counts
+
+
+# ══ 逻辑树 → plan-JSON 桥（v2.0：SEGMENT_OPS 白名单内 + deps 并行）══
+OP_TO_SEG = {
+    "armor_box":     "boolean_diff",
+    "wheel_row":     "array_radial",
+    "track_loop":    "sweep_circle",
+    "grille":        "array_linear",
+    "turret_shell":  "revolve_profile",
+    "gun_barrel":    "cylinder",
+    "mg_port":       "cylinder",
+    "hatch_pair":    "cylinder",
+    "mantlet":       "boolean_union",
+    "exhaust_pipes": "cylinder",
+    "detail_kit":    "array_linear",
+    "camo_paint":    "set_material",
+    "weathering":    "set_material",
+    "display_base":  "cube",
+}
+GATE_ONLY_OPS = {"proportion_check", "flat_armor_check"}   # 验证门 → constraints
+
+
+def to_plan(tree: dict) -> dict:
+    """逻辑树 → plan-JSON（SEGMENT_OPS 白名单内 + deps 并行正确 + gate 进 constraints）。
+
+    转换规则（M7 最高杠杆）：
+      * deps 并行：sections[].depends_on = 逻辑树 deps（**非串链**——修 P1 串链缺陷）
+      * build 节点 → sections（op 经 OP_TO_SEG 映射到 SEGMENT_OPS 白名单）
+      * gate 节点（GATE_ONLY_OPS）→ constraints（谓词判据，不进几何 sections）
+      * params_real 经 mm_at_scale 机器换算进 parameters（单一真源贯穿）
+    """
+    sections: list[dict] = []
+    constraints: list[dict] = []
+    byid = byid_of(tree)
+    gate_ids = {n["id"] for n in tree.get("nodes", [])
+                if n["build"]["op"] in GATE_ONLY_OPS}
+
+    def resolve(deps: list[str]) -> list[str]:
+        """deps 指向 gate 节点时穿透到 gate 的 deps（gate 是验证门不是产物）"""
+        out: list[str] = []
+        for d in deps:
+            if d in gate_ids:
+                out.extend(resolve(byid[d].get("deps", [])))
+            else:
+                out.append(d)
+        return out
+
+    for nid in topo_order(tree):
+        n = byid[nid]
+        op = n["build"]["op"]
+        if op in GATE_ONLY_OPS:
+            constraints.append({
+                "id": nid,
+                "check": n.get("gate", {}).get("machine", ""),
+                "expr": n.get("gate", {}).get("machine_spec", {}).get("expr", ""),
+                "tier": n.get("tier", 2)})
+            continue
+        seg_op = OP_TO_SEG.get(op)
+        if seg_op is None:
+            continue                      # 无映射的 op 跳过（不产非法 section）
+        params = [{"name": k, "type": "FLOAT", "value": v}
+                  for k, v in n["build"].get("params_mm", {}).items()]
+        sections.append({
+            "id": nid,
+            "order": len(sections),
+            "op": seg_op,
+            "stage": "blockout" if not n.get("deps") else "structure",
+            "part": n.get("layer", "").split(" ")[0],
+            "consumes_input": bool(resolve(list(n.get("deps", [])))),
+            "depends_on": resolve(list(n.get("deps", []))),
+            "parameters": params})
+
+    return {"version": "0.3",
+            "intent": tree.get("prompt", ""),
+            "sections": sections,
+            "constraints": constraints}
+
+
+def byid_of(tree: dict) -> dict[str, dict]:
+    return {n["id"]: n for n in tree.get("nodes", [])}
