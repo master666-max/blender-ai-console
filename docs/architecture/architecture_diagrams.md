@@ -248,7 +248,8 @@ sequenceDiagram
 
     rect rgb(248, 248, 255)
         Note over M1,EXP: 数据层沉淀（三环闭环）
-        C->>M1: WAL.append + SnapshotStore.put + commits.commit
+        C->>M1: WAL.append + SnapshotStore.put（checkpoint 时）
+        Note over M1: ⚠️ commits.commit 当前主链路未接线<br/>（方法在 m1_core.py:566，挂单 W-7）
         C->>EXP: record_ai(attention, story, params, evidence)
         Note over EXP: RAG 闭环：下次检索反哺 intake
     end
@@ -268,9 +269,9 @@ stateDiagram-v2
     building --> failed: verify FAIL / Gate 拦截
 
     failed --> pending: retry(sees) 修正后重排队
-    failed --> blocked: 需上游先修复
+    failed --> blocked: 需上游先修复<br/>⚠️ 预留未接线（挂单 W-8）
 
-    pending --> blocked: deps 中有 failed
+    pending --> blocked: deps 中有 failed<br/>⚠️ 预留未接线（挂单 W-8）
 
     passed --> [*]: 段落交付
 
@@ -301,7 +302,7 @@ graph LR
     subgraph FLOW["logic_tree.py 处理流水"]
         LT_VALIDATE["validate_logic_tree()"]
         LT_TOPO["topo_order() → deps 权威拓扑"]
-        LT_TOPLAN["to_plan(tree) → SEGMENT_OPS 映射<br/>（白名单表在 logic_tree 内，<br/>与 plan_schema 的白名单是两份——见挂单 W-2）"]
+        LT_TOPLAN["to_plan(tree) → OP_TO_SEG 映射<br/>（白名单表在 logic_tree.py:OP_TO_SEG，<br/>与 plan_schema.SEGMENT_OPS 是两份——挂单 W-2）"]
         LT_RUNNER["LogicTreeRunner.next_ready()"]
     end
 
@@ -343,7 +344,7 @@ graph TD
 
     subgraph RAG["RAG 沉淀环"]
         C1["节点 passed/failed"] --> C2["record_ai 注意引导+叙事+gate 证据"]
-        C2 --> C3["四层索引沉淀<br/>向量+参数+图+时序"]
+        C3["经验条目沉淀（trigger 键匹配 + weight 排序）<br/>⚠️ 向量/图/时序四层索引未实现（挂单 W-6）"]
         C3 --> C4["recall 反哺下个节点<br/>配方复用+verified_failure"]
         C4 -.-> A1
     end
@@ -364,7 +365,7 @@ graph TB
 
     subgraph HOST["本机"]
         subgraph BP["Blender 5.2 进程"]
-            BPY["bpy（Python 3.11）"]
+            BPY["bpy（Python 3.13.13，实测）"]
             GNSERVER["embedded_server.py<br/>API 服务：8377（已落地 2026-09-29）"]
             GN_NODES["GN 节点组<br/>（op_compiler 产物）"]
         end
@@ -446,10 +447,14 @@ graph TB
 | 挂单 | 内容 | 判据（何时销单） |
 |---|---|---|
 | W-1 | **nlg_bands 零调用方**：⑥ 视觉反馈环的 B3（NLG 带化判词）是设计位，代码里还没有 RD→NLG 的调用 | gn_verify/console import nlg_bands 并在 verify/render 后产判词时销单，图②⑥补实边 |
-| W-2 | **SEGMENT_OPS 两份白名单**：plan_schema.py 与 logic_tree.py 各维护一份 op 白名单，漂移风险 | 合并为单一真源（logic_tree 从 plan_schema import）时销单 |
+| W-2 | **两份 op 白名单**：plan_schema.SEGMENT_OPS（校验用）与 logic_tree.OP_TO_SEG（树→plan 映射用）各一份，漂移风险 | 合并为单一真源（logic_tree 从 plan_schema import）时销单 |
 | ~~W-3~~ | ~~Web 控制台 API 层缺失~~ | **已销单（2026-09-29）**：embedded_server.py 落地——HTTP daemon 线程 + 队列 + 主线程泵（GUI=bpy.app.timers / 后台脚本=manual pump 双模式）；api_revert_live.py 真机 14/14（state/checkpoint/revert/pop/drop_segment/verify/override/UNKNOWN_OP/静态伺服/无死锁）。销单动作：部署图 ⑦ 同步更新 |
 | W-4 | **escape 零调用方**：M4-4 逃逸舱是治理关键件但核心链路无人 import（设计上由 AI 会话层显式走） | AI 会话层接线 escape 通道时销单，图①②补实边 |
 | W-5 | **intake 核心模块无内部调用方**：只被实验脚本 import，运行时调用方是 AI 会话层（进程外） | 会话层代码入库时销单 |
+
+| W-6 | **"四层索引"未实现**：experience 实际只有 trigger 键匹配 + weight 排序召回；向量/参数分布/图结构/时序四层索引是设计愿景（v1 图曾虚写"已实现"——2026-09-29 反向审计揪出） | 新索引层落地时销单，图⑥ C3 改实线描述 |
+| W-7 | **commits.commit 主链路未接线**：SegmentCommits.commit（m1_core.py:566）存在但 console.py 从不调用；段交付的 commit 账本只在 export_state 被读 | console 段 passed 后接 commits.commit 时销单 |
+| W-8 | **blocked 幽灵状态**：logic_tree.STATUSES 含 blocked，但代码无任何转移将其置位（④ 的两条 blocked 入边在代码不存在） | 补置位逻辑（deps failed 时 next_ready 拒绝并置 blocked）或删状态时销单 |
 
 > 挂单纪律：图上每个"⚠️/规划中/设计位"标记必须对应 ⑩ 里一行挂单；
 > 挂单销单与图修改同一个 PR，不允许只改图不销单（或反之）。
