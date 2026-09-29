@@ -27,7 +27,9 @@ def mat(name, color, rough=0.6, metal=0.0, emit=None, es=0.0, alpha=1.0):
         return m
     m = bpy.data.materials.new(name)
     m.use_nodes = True
-    b = m.node_tree.nodes["Principled BSDF"]
+    b = next((nd for nd in m.node_tree.nodes if nd.type == "BSDF_PRINCIPLED"), None)
+    if b is None:
+        b = m.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
     b.inputs["Base Color"].default_value = (*color, 1.0)
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
