@@ -181,6 +181,10 @@ box("WarmBandL", (0.02, 0.7, 0.12), (BX-BW/2+0.03, BY-0.05, 1.55), M_WARM)
 # 玻璃/门不投影（否则罩住前脸挡掉店内光——EEVEE raytracing 实测）
 for _g in (GlassL, GlassR, OBJ_DoorL, OBJ_DoorR):
     _g.visible_shadow = False
+    try:
+        _g.visible_raytracing = False          # 关磨砂透射噪声（EEVEE Next）
+    except AttributeError:
+        pass
 
 # ── 街角 ────────────────────────────────────────────────────
 for i, (vx, vm) in enumerate([(1.02, M_SIGN2), (1.16, M_VEND)]):
